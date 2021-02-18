@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use realsense_rust::{Config, Context, Format as RsFormat, Pipeline, StreamKind};
+use realsense_rust::{Config, Context, Rs2Format, Pipeline, Rs2StreamKind};
 use std::time::Duration;
 
 #[tokio::main]
@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
     }
 
     let pipeline = Pipeline::new()?;
-    let config = Config::new()?.enable_stream(StreamKind::Pose, 0, 0, 0, RsFormat::_6Dof, 200)?;
+    let config = Config::new()?.enable_stream(Rs2StreamKind::Pose, 0, 0, 0, Rs2Format::_6Dof, 200)?;
     let mut pipeline = pipeline.start(&config)?;
 
     let profile = pipeline.profile();

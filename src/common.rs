@@ -1,4 +1,4 @@
-pub use crate::kind::{Format, StreamKind};
+pub use crate::kind::{Rs2Format, Rs2StreamKind};
 #[cfg(feature = "with-image")]
 pub use image::{
     buffer::ConvertBuffer,
@@ -12,7 +12,6 @@ pub use nalgebra::{
 pub use num_derive::FromPrimitive;
 pub use num_traits::FromPrimitive;
 pub use realsense_sys as sys;
-pub use safe_transmute::guard::PedanticGuard;
 #[cfg(any(unix))]
 pub use std::os::unix::ffi::OsStrExt;
 #[cfg(any(windows))]

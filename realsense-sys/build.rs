@@ -121,8 +121,8 @@ where
         }
 
         const PREFIX: &str = "#define RS2_API_";
-        if line.starts_with(PREFIX) {
-            let mut tokens = line[PREFIX.len()..].split_whitespace();
+        if let Some(end) = line.strip_prefix(PREFIX) {
+            let mut tokens = end.split_whitespace();
             let name_opt = tokens.next();
             let version_opt = tokens.next();
 

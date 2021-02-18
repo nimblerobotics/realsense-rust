@@ -1,13 +1,13 @@
 //! Marker traits and types for [ProcessingBlock](crate::processing_block::ProcessingBlock).
 
-use crate::{common::*, kind::Extension};
+use crate::{common::*, kind::Rs2Extension};
 
 pub trait ProcessingBlockKind {}
 pub trait ExtendableProcessingBlockKind
 where
     Self: ProcessingBlockKind,
 {
-    const EXTENSION: Extension;
+    const EXTENSION: Rs2Extension;
 }
 
 #[derive(Debug)]
@@ -18,49 +18,49 @@ impl ProcessingBlockKind for Any {}
 pub struct DecimationFilterKind;
 impl ProcessingBlockKind for DecimationFilterKind {}
 impl ExtendableProcessingBlockKind for DecimationFilterKind {
-    const EXTENSION: Extension = Extension::DecimationFilter;
+    const EXTENSION: Rs2Extension = Rs2Extension::DecimationFilter;
 }
 
 #[derive(Debug)]
 pub struct ThresholdFilterKind;
 impl ProcessingBlockKind for ThresholdFilterKind {}
 impl ExtendableProcessingBlockKind for ThresholdFilterKind {
-    const EXTENSION: Extension = Extension::ThresholdFilter;
+    const EXTENSION: Rs2Extension = Rs2Extension::ThresholdFilter;
 }
 
 #[derive(Debug)]
 pub struct DisparityFilterKind;
 impl ProcessingBlockKind for DisparityFilterKind {}
 impl ExtendableProcessingBlockKind for DisparityFilterKind {
-    const EXTENSION: Extension = Extension::DisparityFilter;
+    const EXTENSION: Rs2Extension = Rs2Extension::DisparityFilter;
 }
 
 #[derive(Debug)]
 pub struct SpatialFilterKind;
 impl ProcessingBlockKind for SpatialFilterKind {}
 impl ExtendableProcessingBlockKind for SpatialFilterKind {
-    const EXTENSION: Extension = Extension::SpatialFilter;
+    const EXTENSION: Rs2Extension = Rs2Extension::SpatialFilter;
 }
 
 #[derive(Debug)]
 pub struct TemporalFilterKind;
 impl ProcessingBlockKind for TemporalFilterKind {}
 impl ExtendableProcessingBlockKind for TemporalFilterKind {
-    const EXTENSION: Extension = Extension::TemporalFilter;
+    const EXTENSION: Rs2Extension = Rs2Extension::TemporalFilter;
 }
 
 #[derive(Debug)]
 pub struct HoleFillingFilterKind;
 impl ProcessingBlockKind for HoleFillingFilterKind {}
 impl ExtendableProcessingBlockKind for HoleFillingFilterKind {
-    const EXTENSION: Extension = Extension::HoleFillingFilter;
+    const EXTENSION: Rs2Extension = Rs2Extension::HoleFillingFilter;
 }
 
 #[derive(Debug)]
 pub struct ZeroOrderFilterKind;
 impl ProcessingBlockKind for ZeroOrderFilterKind {}
 impl ExtendableProcessingBlockKind for ZeroOrderFilterKind {
-    const EXTENSION: Extension = Extension::ZeroOrderFilter;
+    const EXTENSION: Rs2Extension = Rs2Extension::ZeroOrderFilter;
 }
 
 #[derive(Debug)]

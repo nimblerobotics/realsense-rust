@@ -1,63 +1,11 @@
 //! Common types and functions.
 
-use crate::{
-    common::*,
-    error::{Error, Result},
-};
+use crate::common::*;
 
 #[cfg(feature = "with-image")]
 pub use rs2_image::*;
 
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_millis(sys::RS2_DEFAULT_TIMEOUT as u64);
-
-/// Fallible conversion to `Cow<'a, CStr>`.
-///
-/// It is used for FFI interfaces that requires C string pointers.
-pub trait TryIntoCowCStr<'a> {
-    fn try_into_cow_cstr(self) -> Result<Cow<'a, CStr>>;
-}
-
-impl<'a> TryIntoCowCStr<'a> for CString {
-    fn try_into_cow_cstr(self) -> Result<Cow<'a, CStr>> {
-        Ok(self.into())
-    }
-}
-
-impl<'a> TryIntoCowCStr<'a> for &'a CStr {
-    fn try_into_cow_cstr(self) -> Result<Cow<'a, CStr>> {
-        Ok(self.into())
-    }
-}
-
-impl<'a> TryIntoCowCStr<'a> for String {
-    fn try_into_cow_cstr(self) -> Result<Cow<'a, CStr>> {
-        let bytes: Option<Vec<_>> = self
-            .into_bytes()
-            .into_iter()
-            .map(|byte| NonZeroU8::new(byte))
-            .collect();
-        let bytes = bytes.ok_or_else(|| {
-            Error::ToCStrConversion(
-                "cannot convert to CString: the string cannot contain null bytes",
-            )
-        })?;
-        let cstring = CString::from(bytes);
-        Ok(cstring.into())
-    }
-}
-
-impl<'a> TryIntoCowCStr<'a> for &str {
-    fn try_into_cow_cstr(self) -> Result<Cow<'a, CStr>> {
-        let bytes: Option<Vec<_>> = self.bytes().map(|byte| NonZeroU8::new(byte)).collect();
-        let bytes = bytes.ok_or_else(|| {
-            Error::ToCStrConversion(
-                "cannot convert to CString: the string cannot contain null bytes",
-            )
-        })?;
-        let cstring = CString::from(bytes);
-        Ok(cstring.into())
-    }
-}
 
 /// The intrinsic parameters for motion devices.
 pub struct MotionIntrinsics(pub sys::rs2_motion_device_intrinsic);
@@ -169,98 +117,6 @@ impl AsMut<sys::rs2_extrinsics> for Extrinsics {
 
 unsafe impl Send for Extrinsics {}
 unsafe impl Sync for Extrinsics {}
-
-/// Represents a pose detected by sensor.
-#[derive(Debug)]
-pub struct PoseData(pub sys::rs2_pose);
-
-impl PoseData {
-    pub fn tracker_confidence(&self) -> u32 {
-        self.0.tracker_confidence as u32
-    }
-
-    pub fn mapper_confidence(&self) -> u32 {
-        self.0.mapper_confidence as u32
-    }
-}
-
-#[cfg(feature = "with-nalgebra")]
-impl PoseData {
-    pub fn translation(&self) -> Translation3<f32> {
-        let sys::rs2_vector { x, y, z } = self.0.translation;
-        Translation3::new(x, y, z)
-    }
-
-    pub fn velocity(&self) -> Vector3<f32> {
-        let sys::rs2_vector { x, y, z } = self.0.velocity;
-        Vector3::new(x, y, z)
-    }
-
-    pub fn acceleration(&self) -> Vector3<f32> {
-        let sys::rs2_vector { x, y, z } = self.0.acceleration;
-        Vector3::new(x, y, z)
-    }
-
-    pub fn rotation(&self) -> UnitQuaternion<f32> {
-        let sys::rs2_quaternion { x, y, z, w } = self.0.rotation;
-        Unit::new_unchecked(Quaternion::new(w, x, z, y))
-    }
-
-    pub fn angular_velocity(&self) -> Vector3<f32> {
-        let sys::rs2_vector { x, y, z } = self.0.angular_velocity;
-        Vector3::new(x, y, z)
-    }
-
-    pub fn angular_acceleration(&self) -> Vector3<f32> {
-        let sys::rs2_vector { x, y, z } = self.0.angular_acceleration;
-        Vector3::new(x, y, z)
-    }
-}
-
-impl Deref for PoseData {
-    type Target = sys::rs2_pose;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for PoseData {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl AsRef<sys::rs2_pose> for PoseData {
-    fn as_ref(&self) -> &sys::rs2_pose {
-        &self.0
-    }
-}
-
-impl AsMut<sys::rs2_pose> for PoseData {
-    fn as_mut(&mut self) -> &mut sys::rs2_pose {
-        &mut self.0
-    }
-}
-
-unsafe impl Send for PoseData {}
-unsafe impl Sync for PoseData {}
-
-/// Contains width and height of a frame.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct Resolution {
-    pub width: usize,
-    pub height: usize,
-}
-/// Represents the specification of a stream.
-#[derive(Debug)]
-pub struct StreamProfileData {
-    pub stream: StreamKind,
-    pub format: Format,
-    pub index: usize,
-    pub unique_id: i32,
-    pub framerate: i32,
-}
 
 #[cfg(feature = "with-image")]
 mod rs2_image {

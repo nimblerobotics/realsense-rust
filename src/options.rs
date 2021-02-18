@@ -96,7 +96,7 @@ impl OptionHandle {
         }
     }
 
-    pub fn name<'a>(&'a self) -> Result<&'a str> {
+    pub fn name(&self) -> Result<&str> {
         unsafe {
             let mut checker = ErrorChecker::new();
             let ptr = sys::rs2_get_option_name(
@@ -110,7 +110,7 @@ impl OptionHandle {
         }
     }
 
-    pub fn option_description<'a>(&'a self) -> Result<&'a str> {
+    pub fn option_description(&self) -> Result<&str> {
         unsafe {
             let mut checker = ErrorChecker::new();
             let ptr = sys::rs2_get_option_description(
@@ -124,7 +124,7 @@ impl OptionHandle {
         }
     }
 
-    pub fn value_description<'a>(&'a self, value: f32) -> Result<&'a str> {
+    pub fn value_description(&self, value: f32) -> Result<&str> {
         unsafe {
             let mut checker = ErrorChecker::new();
             let ptr = sys::rs2_get_option_value_description(

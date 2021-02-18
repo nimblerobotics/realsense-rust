@@ -1,5 +1,5 @@
 [package]
-authors = ["jerry73204 <jerry73204@gmail.com>"]
+authors = ["jerry73204 <jerry73204@gmail.com>", "Jeremy Steward <jeremy.steward@tangramvision.com>", "Brandon Minor <brandon@tangramvision.com>"]
 description = "High-level RealSense library in Rust"
 documentation = "https://docs.rs/realsense-rust/"
 edition = "2018"
@@ -9,14 +9,22 @@ name = "realsense-rust"
 repository = "https://github.com/jerry73204/realsense-rust"
 version = "0.5.0"
 
+[features]
+default = []
+buildtime-bindgen = ["realsense-sys/buildtime-bindgen"]
+device-test = ["with-image"]
+with-image = ["image"]
+with-nalgebra = ["nalgebra"]
+
 [dependencies]
+anyhow = "1.0"
 futures = "0.3"
 image = {version = "0.23", optional = true}
 nalgebra = {version = "0.24", optional = true}
 num-derive = "0.3"
 num-traits = "0.2"
 realsense-sys = {version = "0.3.0", path = "realsense-sys"}
-safe-transmute = "0.11"
+thiserror = "1.0"
 
 [dev-dependencies]
 anyhow = "1.0"
@@ -24,10 +32,3 @@ crossbeam = "0.8"
 kiss3d = "0.29"
 lazy_static = "1.4"
 tokio = {version = "1.1", features = ["rt-multi-thread", "macros"]}
-
-[features]
-buildtime-bindgen = ["realsense-sys/buildtime-bindgen"]
-default = ["with-nalgebra", "with-image"]
-device-test = ["with-image"]
-with-image = ["image"]
-with-nalgebra = ["nalgebra"]

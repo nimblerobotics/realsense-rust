@@ -13,10 +13,10 @@ pub const RS2_UNSIGNED_UPDATE_MODE_UPDATE: u32 = 0;
 pub const RS2_UNSIGNED_UPDATE_MODE_READ_ONLY: u32 = 1;
 pub const RS2_UNSIGNED_UPDATE_MODE_FULL: u32 = 2;
 pub const RS2_API_MAJOR_VERSION: u32 = 2;
-pub const RS2_API_MINOR_VERSION: u32 = 41;
+pub const RS2_API_MINOR_VERSION: u32 = 42;
 pub const RS2_API_PATCH_VERSION: u32 = 0;
 pub const RS2_API_BUILD_VERSION: u32 = 0;
-pub const RS2_API_VERSION: u32 = 24100;
+pub const RS2_API_VERSION: u32 = 24200;
 pub const RS2_DEFAULT_TIMEOUT: u32 = 15000;
 #[doc = "< Frames didn't arrived within 5 seconds"]
 pub const rs2_notification_category_RS2_NOTIFICATION_CATEGORY_FRAMES_TIMEOUT:
@@ -204,9 +204,7 @@ fn bindgen_test_layout_rs2_intrinsics() {
         )
     );
 }
-#[doc = " \\brief Video DSM (Digital Sync Module) parameters for calibration (same layout as in FW ac_depth_params)"]
-#[doc = "This is the block in MC that converts angles to dimensionless integers reported to MA (using \"DSM coefficients\")."]
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Debug, Copy, Clone)]
 pub struct rs2_dsm_params {
     #[doc = "< system_clock::time_point::time_since_epoch().count()"]
@@ -229,7 +227,15 @@ pub struct rs2_dsm_params {
     pub rtd_offset: f32,
     #[doc = "< the temperature recorded times 2 (ldd for depth; hum for rgb)"]
     pub temp_x2: ::std::os::raw::c_uchar,
-    pub reserved: [::std::os::raw::c_uchar; 11usize],
+    #[doc = "< the scale factor to horizontal LOS coefficients in MC"]
+    pub mc_h_scale: f32,
+    #[doc = "< the scale factor to vertical LOS coefficients in MC"]
+    pub mc_v_scale: f32,
+    #[doc = "< time (in weeks) since factory calibration"]
+    pub weeks_since_calibration: ::std::os::raw::c_uchar,
+    #[doc = "< time (in weeks) between factory calibration and last AC event"]
+    pub ac_weeks_since_calibaration: ::std::os::raw::c_uchar,
+    pub reserved: [::std::os::raw::c_uchar; 1usize],
 }
 #[test]
 fn bindgen_test_layout_rs2_dsm_params() {
@@ -240,7 +246,7 @@ fn bindgen_test_layout_rs2_dsm_params() {
     );
     assert_eq!(
         ::std::mem::align_of::<rs2_dsm_params>(),
-        8usize,
+        1usize,
         concat!("Alignment of ", stringify!(rs2_dsm_params))
     );
     assert_eq!(
@@ -344,8 +350,53 @@ fn bindgen_test_layout_rs2_dsm_params() {
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<rs2_dsm_params>())).reserved as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<rs2_dsm_params>())).mc_h_scale as *const _ as usize },
         37usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(rs2_dsm_params),
+            "::",
+            stringify!(mc_h_scale)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<rs2_dsm_params>())).mc_v_scale as *const _ as usize },
+        41usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(rs2_dsm_params),
+            "::",
+            stringify!(mc_v_scale)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<rs2_dsm_params>())).weeks_since_calibration as *const _ as usize
+        },
+        45usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(rs2_dsm_params),
+            "::",
+            stringify!(weeks_since_calibration)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<rs2_dsm_params>())).ac_weeks_since_calibaration as *const _
+                as usize
+        },
+        46usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(rs2_dsm_params),
+            "::",
+            stringify!(ac_weeks_since_calibaration)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<rs2_dsm_params>())).reserved as *const _ as usize },
+        47usize,
         concat!(
             "Offset of field: ",
             stringify!(rs2_dsm_params),
@@ -3168,9 +3219,9 @@ pub const rs2_option_RS2_OPTION_STREAM_FORMAT_FILTER: rs2_option = 44;
 pub const rs2_option_RS2_OPTION_STREAM_INDEX_FILTER: rs2_option = 45;
 #[doc = "< When supported, this option make the camera to switch the emitter state every frame. 0 for disabled, 1 for enabled"]
 pub const rs2_option_RS2_OPTION_EMITTER_ON_OFF: rs2_option = 46;
-#[doc = "< Zero order point x"]
+#[doc = "< Deprecated!!! - Zero order point x"]
 pub const rs2_option_RS2_OPTION_ZERO_ORDER_POINT_X: rs2_option = 47;
-#[doc = "< Zero order point y"]
+#[doc = "< Deprecated!!! - Zero order point y"]
 pub const rs2_option_RS2_OPTION_ZERO_ORDER_POINT_Y: rs2_option = 48;
 #[doc = "< LDD temperature"]
 pub const rs2_option_RS2_OPTION_LLD_TEMPERATURE: rs2_option = 49;
@@ -3196,7 +3247,7 @@ pub const rs2_option_RS2_OPTION_ENABLE_DYNAMIC_CALIBRATION: rs2_option = 58;
 pub const rs2_option_RS2_OPTION_DEPTH_OFFSET: rs2_option = 59;
 #[doc = "< Power of the LED (light emitting diode), with 0 meaning LED off"]
 pub const rs2_option_RS2_OPTION_LED_POWER: rs2_option = 60;
-#[doc = "< Toggle Zero-Order mode"]
+#[doc = "< DEPRECATED! - Toggle Zero-Order mode"]
 pub const rs2_option_RS2_OPTION_ZERO_ORDER_ENABLED: rs2_option = 61;
 #[doc = "< Preserve previous map when starting"]
 pub const rs2_option_RS2_OPTION_ENABLE_MAP_PRESERVATION: rs2_option = 62;
@@ -3245,8 +3296,12 @@ pub const rs2_option_RS2_OPTION_ALTERNATE_IR: rs2_option = 82;
 pub const rs2_option_RS2_OPTION_NOISE_ESTIMATION: rs2_option = 83;
 #[doc = "< Enables data collection for calculating IR pixel reflectivity"]
 pub const rs2_option_RS2_OPTION_ENABLE_IR_REFLECTIVITY: rs2_option = 84;
+#[doc = "< Set and get auto exposure limit in microseconds. Default is 0 which means full exposure range. If the requested exposure limit is greater than frame time, it will be set to frame time at runtime. Setting will not take effect until next streaming session."]
+pub const rs2_option_RS2_OPTION_AUTO_EXPOSURE_LIMIT: rs2_option = 85;
+#[doc = "< Set and get auto gain limits ranging from 16 to 248. Default is 0 which means full gain. If the requested gain limit is less than 16, it will be set to 16. If the requested gain limit is greater than 248, it will be set to 248. Setting will not take effect until next streaming session."]
+pub const rs2_option_RS2_OPTION_AUTO_GAIN_LIMIT: rs2_option = 86;
 #[doc = "< Number of enumeration values. Not a valid input: intended to be used in for-loops."]
-pub const rs2_option_RS2_OPTION_COUNT: rs2_option = 85;
+pub const rs2_option_RS2_OPTION_COUNT: rs2_option = 87;
 #[doc = " \\brief Defines general configuration controls."]
 #[doc = "These can generally be mapped to camera UVC controls, and can be set / queried at any time unless stated otherwise."]
 pub type rs2_option = ::std::os::raw::c_uint;
@@ -3313,8 +3368,9 @@ pub const rs2_l500_visual_preset_RS2_L500_VISUAL_PRESET_NO_AMBIENT: rs2_l500_vis
 pub const rs2_l500_visual_preset_RS2_L500_VISUAL_PRESET_LOW_AMBIENT: rs2_l500_visual_preset = 3;
 pub const rs2_l500_visual_preset_RS2_L500_VISUAL_PRESET_MAX_RANGE: rs2_l500_visual_preset = 4;
 pub const rs2_l500_visual_preset_RS2_L500_VISUAL_PRESET_SHORT_RANGE: rs2_l500_visual_preset = 5;
+pub const rs2_l500_visual_preset_RS2_L500_VISUAL_PRESET_AUTOMATIC: rs2_l500_visual_preset = 6;
 #[doc = "< Number of enumeration values. Not a valid input: intended to be used in for-loops."]
-pub const rs2_l500_visual_preset_RS2_L500_VISUAL_PRESET_COUNT: rs2_l500_visual_preset = 6;
+pub const rs2_l500_visual_preset_RS2_L500_VISUAL_PRESET_COUNT: rs2_l500_visual_preset = 7;
 #[doc = " \\brief For L500 devices: provides optimized settings (presets) for specific types of usage."]
 pub type rs2_l500_visual_preset = ::std::os::raw::c_uint;
 extern "C" {
@@ -3339,6 +3395,7 @@ pub type rs2_ambient_light = ::std::os::raw::c_uint;
 extern "C" {
     pub fn rs2_ambient_light_to_string(preset: rs2_ambient_light) -> *const ::std::os::raw::c_char;
 }
+pub const rs2_digital_gain_RS2_DIGITAL_GAIN_AUTO: rs2_digital_gain = 0;
 pub const rs2_digital_gain_RS2_DIGITAL_GAIN_HIGH: rs2_digital_gain = 1;
 pub const rs2_digital_gain_RS2_DIGITAL_GAIN_LOW: rs2_digital_gain = 2;
 #[doc = " \\brief digital gain for RS2_OPTION_DIGITAL_GAIN option."]
@@ -4087,6 +4144,21 @@ extern "C" {
         min_severity: rs2_log_severity,
         callback: rs2_log_callback_ptr,
         arg: *mut ::std::os::raw::c_void,
+        error: *mut *mut rs2_error,
+    );
+}
+extern "C" {
+    pub fn rs2_reset_logger(error: *mut *mut rs2_error);
+}
+extern "C" {
+    #[doc = " Enable rolling log file when used with rs2_log_to_file:"]
+    #[doc = " Upon reaching (max_size/2) bytes, the log will be renamed with an \".old\" suffix and a new log created. Any"]
+    #[doc = " previous .old file will be erased."]
+    #[doc = " Must have permissions to remove/rename files in log file directory."]
+    #[doc = " \\param[in] max_size   max file size in megabytes"]
+    #[doc = " \\param[out] error     if non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
+    pub fn rs2_enable_rolling_log_file(
+        max_size: ::std::os::raw::c_uint,
         error: *mut *mut rs2_error,
     );
 }

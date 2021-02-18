@@ -7,7 +7,7 @@ use crate::{
     frame::{AnyFrame, DepthFrame, ExtendedFrame, Frame, GenericFrameEx, PointsFrame, VideoFrame},
     frame_kind::FrameKind,
     frame_queue::FrameQueue,
-    kind::{ColorScheme, HoleFillingMode, PersistenceControl, Rs2Option, StreamKind},
+    kind::{ColorScheme, HoleFillingMode, PersistenceControl, Rs2Option, Rs2StreamKind},
     options::ToOptions,
     processing_block_kind,
 };
@@ -502,7 +502,7 @@ impl Syncer {
 }
 
 impl Align {
-    pub fn create(align_to: StreamKind) -> Result<Self> {
+    pub fn create(align_to: Rs2StreamKind) -> Result<Self> {
         let processing_block = unsafe {
             let mut checker = ErrorChecker::new();
             let ptr = sys::rs2_create_align(align_to as sys::rs2_stream, checker.inner_mut_ptr());

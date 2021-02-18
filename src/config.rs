@@ -4,7 +4,7 @@ use crate::{
     base::TryIntoCowCStr,
     common::*,
     error::{ErrorChecker, Result},
-    kind::{Format, StreamKind},
+    kind::{Rs2Format, Rs2StreamKind},
     pipeline::Pipeline,
     pipeline_kind::PipelineState,
     pipeline_profile::PipelineProfile,
@@ -34,11 +34,11 @@ impl Config {
     /// Enable data stream with attributes.
     pub fn enable_stream(
         self,
-        stream: StreamKind,
+        stream: Rs2StreamKind,
         index: usize,
         width: usize,
         height: usize,
-        format: Format,
+        format: Rs2Format,
         framerate: usize,
     ) -> Result<Self> {
         unsafe {
@@ -99,7 +99,7 @@ impl Config {
     }
 
     /// Disable data stream by stream index.
-    pub fn disable_index_stream(self, stream: StreamKind, index: usize) -> Result<Self> {
+    pub fn disable_index_stream(self, stream: Rs2StreamKind, index: usize) -> Result<Self> {
         unsafe {
             let mut checker = ErrorChecker::new();
             sys::rs2_config_disable_indexed_stream(
@@ -114,7 +114,7 @@ impl Config {
     }
 
     /// Disable data stream by stream kind.
-    pub fn disable_stream(self, stream: StreamKind) -> Result<Self> {
+    pub fn disable_stream(self, stream: Rs2StreamKind) -> Result<Self> {
         unsafe {
             let mut checker = ErrorChecker::new();
             sys::rs2_config_disable_stream(

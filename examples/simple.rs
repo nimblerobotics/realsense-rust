@@ -4,15 +4,15 @@ use anyhow::Result;
 mod example {
     use anyhow::Result;
     use image::ImageFormat;
-    use realsense_rust::{prelude::*, Config, Format, Pipeline, Resolution, StreamKind};
+    use realsense_rust::{prelude::*, Config, Pipeline, Resolution, Rs2Format, Rs2StreamKind};
     use std::time::Duration;
 
     pub fn main() -> Result<()> {
         // create pipeline
         let pipeline = Pipeline::new()?;
         let config = Config::new()?
-            .enable_stream(StreamKind::Depth, 0, 640, 0, Format::Z16, 30)?
-            .enable_stream(StreamKind::Color, 0, 640, 0, Format::Rgb8, 30)?;
+            .enable_stream(Rs2StreamKind::Depth, 0, 640, 0, Rs2Format::Z16, 30)?
+            .enable_stream(Rs2StreamKind::Color, 0, 640, 0, Rs2Format::Rgb8, 30)?;
         let mut pipeline = pipeline.start(&config)?;
 
         // process frames
