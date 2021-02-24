@@ -9,7 +9,7 @@ mod points;
 mod pose;
 mod prelude;
 
-pub use self::image::{DepthFrame, DisparityFrame, VideoFrame};
+pub use self::image::{DepthFrame, DisparityFrame, ImageFrame, VideoFrame};
 pub use self::motion::MotionFrame;
 pub use self::points::PointsFrame;
 pub use composite::CompositeFrame;

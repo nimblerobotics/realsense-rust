@@ -9,6 +9,7 @@
 //! is supported by the sensor before attempting to set it. Failure to do so may cause
 //! an error in operation.
 
+use super::Rs2Exception;
 use num_derive::{FromPrimitive, ToPrimitive};
 use realsense_sys as sys;
 use std::ffi::CStr;
@@ -24,8 +25,8 @@ pub enum OptionSetError {
     #[error("Option is read only.")]
     OptionIsReadOnly,
     /// The requested option could not be set. Reason is reported by the sensor.
-    #[error("Could not set option. Reason: {0}")]
-    CouldNotSetOption(String),
+    #[error("Could not set option. Type: {0}; Reason: {1}")]
+    CouldNotSetOption(Rs2Exception, String),
 }
 
 /// The enumeration of options available in the RealSense SDK.

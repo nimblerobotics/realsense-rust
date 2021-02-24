@@ -22,7 +22,7 @@ use crate::{
     common::*,
     kind::{Extension, Rs2Extension, Rs2FrameMetadata, Rs2Option, Rs2TimestampDomain},
     sensor::Sensor,
-    stream::StreamProfile,
+    stream_profile::StreamProfile,
 };
 use anyhow::Result;
 use num_traits::ToPrimitive;
@@ -37,9 +37,8 @@ pub struct Video;
 
 /// Holds the raw data pointer and derived data for an RS2 Image frame.
 ///
-/// All fields in this struct are initialized during struct creation (via `try_from`).
-/// Everything called from here during runtime should be valid as long as the
-/// Frame is in scope... like normal Rust.
+/// This generic type isn't particularly useful on it's own. In all cases, you want a specialized
+/// version of this class ([`DepthFrame`], [`VideoFrame`], [`DisparityFrame`]).
 pub struct ImageFrame<'a, Kind> {
     /// The raw data pointer from the original rs2 frame.
     frame_ptr: NonNull<sys::rs2_frame>,
@@ -88,7 +87,7 @@ pub type DisparityFrame<'a> = ImageFrame<'a, Disparity>;
 pub type VideoFrame<'a> = ImageFrame<'a, Video>;
 
 impl<'a, K> ImageFrame<'a, K> {
-    /// Iter derivation for all Image frames
+    /// Iterator through every [pixel](crate::frame::PixelKind) of an image frame.
     pub fn iter(&'a self) -> ImageIter<'a, ImageFrame<'a, K>> {
         ImageIter {
             frame: self,
@@ -99,7 +98,6 @@ impl<'a, K> ImageFrame<'a, K> {
 }
 
 impl<'a, K> Drop for ImageFrame<'a, K> {
-    /// Drop the raw pointer stored with this struct whenever it goes out of scope.
     fn drop(&mut self) {
         unsafe {
             if self.should_drop {
@@ -262,7 +260,7 @@ impl<'a, T> FrameEx<'a> for ImageFrame<'a, T> {
         }
     }
 
-    unsafe fn get_owned_frame_ptr(mut self) -> NonNull<sys::rs2_frame> {
+    unsafe fn get_owned_raw(mut self) -> NonNull<sys::rs2_frame> {
         self.should_drop = false;
 
         self.frame_ptr
@@ -286,11 +284,9 @@ impl<'a> DepthFrameEx for DepthFrame<'a> {
 
     fn depth_units(&self) -> Result<f32> {
         let sensor = self.sensor()?;
-        let depth_units = sensor
-            .get_option(Rs2Option::DepthUnits)
-            .ok_or(anyhow::anyhow!(
-                "Option is not supported on the sensor for this frame type."
-            ))?;
+        let depth_units = sensor.get_option(Rs2Option::DepthUnits).ok_or_else(|| {
+            anyhow::anyhow!("Option is not supported on the sensor for this frame type.")
+        })?;
         Ok(depth_units)
     }
 }
@@ -312,11 +308,9 @@ impl<'a> DepthFrameEx for DisparityFrame<'a> {
 
     fn depth_units(&self) -> Result<f32> {
         let sensor = self.sensor()?;
-        let depth_units = sensor
-            .get_option(Rs2Option::DepthUnits)
-            .ok_or(anyhow::anyhow!(
-                "Option is not supported on the sensor for this frame type."
-            ))?;
+        let depth_units = sensor.get_option(Rs2Option::DepthUnits).ok_or_else(|| {
+            anyhow::anyhow!("Option is not supported on the sensor for this frame type.")
+        })?;
         Ok(depth_units)
     }
 }

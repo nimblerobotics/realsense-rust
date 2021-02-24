@@ -1,0 +1,53 @@
+# CONFIGURATION
+
+stages:
+  - doc
+  - build_artifacts
+
+before_script:
+  # Update rust in case the latest version isn't built into our docker image.
+  - rustup update
+
+##### ########## ########## ########## ########## #####
+# TEST STAGE
+# - [PASS REQ] runs all unit tests in the build
+# - [PASS REQ] runs a lint checker over every piece of code
+
+# test:
+#   stage: test
+#   script:
+#     - rustc --version
+#     - cargo --version
+#     - cargo test --verbose
+#
+# lint:
+#   stage: test
+#   script:
+#     - rustc --version
+#     - cargo --version
+#     - cargo clippy --all-targets --all-features -- -D warnings
+#
+
+##### ########## ########## ########## ########## #####
+# DOC STAGE
+# - [PASS OPT] checks for documentation on all relevant pieces of code
+# - [PASS REQ] creates documentation pages
+doc-check:
+  stage: doc
+  script:
+    - cargo clippy --all-targets --all-features -- -A clippy::all -D clippy::missing_docs_in_private_items
+  allow_failure: true
+
+build_badges:
+  stage: build_artifacts
+  script:
+    - rustc --version
+    - cargo --version
+    - tangram-badge-generator -d $CI_PROJECT_DIR
+  artifacts:
+    paths:
+      - ./ci/*.svg
+    when: always
+    expire_in: 4 weeks
+  only:
+    - main

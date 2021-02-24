@@ -13,22 +13,43 @@
 //!
 //! # Get Started
 //!
-//! You can start by [Pipeline](Pipeline). This is the minimal example to capture color and depth images.
+//! You can start by using [`InactivePipeline`](crate::pipeline::InactivePipeline). This is the
+//! minimal example to capture color and depth images.
 //!
-//! ```no_run
+//! ```rust
 //! use anyhow::Result;
-//! use realsense_rust::{Config, Rs2Format, Pipeline, Rs2StreamKind};
+//! use realsense_rust::{
+//!     config::Config,
+//!     kind::{Rs2Format, Rs2StreamKind},
+//!     pipeline::{
+//!         InactivePipeline,
+//!         ActivePipeline
+//!     },
+//! };
+//! use std::convert::TryFrom;
 //!
-//! fn main() -> anyhow::Result<()> {
-//!     let pipeline = Pipeline::new()?;
-//!     let config = Config::new()?
+//! fn main() -> Result<()> {
+//!     let context = Context::new()?;
+//!     let pipeline = InactivePipeline::try_from(context)?;
+//!
+//!     let config = Config::new()?;
+//!     config
 //!         .enable_stream(Rs2StreamKind::Depth, 0, 640, 0, Rs2Format::Z16, 30)?
 //!         .enable_stream(Rs2StreamKind::Color, 0, 640, 0, Rs2Format::Rgb8, 30)?;
+//!
 //!     let mut pipeline = pipeline.start(&config)?;
 //!
-//!     let frames = pipeline.wait(None)?.unwrap();
-//!     let color_frame = frames.color_frame()?.unwrap();
-//!     let depth_frame = frames.depth_frame()?.unwrap();
+//!     let frames = pipeline.wait(None)?;
+//!     let video_frames = frames.frames_of_extension::<VideoFrame>();
+//!     let depth_frames = frames.frames_of_extension::<DepthFrame>();
+//!
+//!     for f in video_frames {
+//!         // process video / color frames
+//!     }
+//!
+//!     for d in depth_frames {
+//!         // process depth frames
+//!     }
 //!
 //!     Ok(())
 //! }
@@ -81,13 +102,13 @@
 //! the ability to be "extended" to support certain interfaces. This is masking some of the
 //! inheritance based structure from the underlying C++ code that is the basis of librealsense2. In
 //! any case, extensions to frames, sensors, filters, etc. are all made possible through the
-//! `rs2_extension` enumeration (See [Rs2Extension] for how we handle this on the Rust
-//! side). What's unfortunate here is that all these extensions are contained within a single
-//! enumeration, as opposed to having a separate enumeration for frames, sensors, etc. This is
-//! awkward to use when actually programming, as the natural way to know exactly what type you have
-//! is not only to know what pointer type you received, but to ask the API if you can extend that
-//! pointer to a (growing) list of different extensions, many of which make no sense (e.g. you can
-//! never extend a frame to `rs2_extension_RS2_EXTENSION_ZERO_ORDER_FILTER`).
+//! `rs2_extension` enumeration (See [`Rs2Extension`](kind::Rs2Extension) for how we handle this on
+//! the Rust side). What's unfortunate here is that all these extensions are contained within a
+//! single enumeration, as opposed to having a separate enumeration for frames, sensors, etc. This
+//! is awkward to use when actually programming, as the natural way to know exactly what type you
+//! have is not only to know what pointer type you received, but to ask the API if you can extend
+//! that pointer to a (growing) list of different extensions, many of which make no sense (e.g. you
+//! can never extend a frame to `rs2_extension_RS2_EXTENSION_ZERO_ORDER_FILTER`).
 //!
 //! Instead, we try to preemptively understand what concrete "type" of data you have from the
 //! pointers upfront, and make that clear in the Rust API by providing a concrete type back. This
@@ -114,7 +135,7 @@
 //!
 //! The librealsense2 C-API does not always do the best job at explaining object lifetimes. It is
 //! important to understand that librealsense2 is first and foremost implemented in C++, and the
-//! Rust wrapper we provide here is build on a C-wrapper around that C++ API. While the underlying
+//! Rust wrapper we provide here is built on a C-wrapper around that C++ API. While the underlying
 //! C++ library takes advantage of C++11 abstractions such as `shared_ptr` or `unique_ptr` to
 //! declare ownership semantics, the C wrapper around it cannot express these types. So instead it
 //! uses raw pointers and attempts to use documentation to help close the gap between what pointers
@@ -154,10 +175,9 @@
 //! rs2_error`. Most of these checks are null-checks on the input pointer type, but not all.
 //!
 //! On the Rust side, we catch / check these `*mut rs2_error` types internally, and then signal
-//! this back to the user by returning a `Result` value of some kind. We cache some of the
-//! metadata or small fields in our Rust structs so that we can reduce the amount of `Result`
-//! checks that need to be done by the user, and likewise to keep relevant data cached as long as
-//! possible.
+//! this back to the user by returning a `Result` value of some kind. We cache some of the metadata
+//! or small fields in our Rust structs so that we can reduce the amount of `Result` checks that
+//! need to be done by the user, and likewise to keep relevant data cached as long as possible.
 //!
 //! One example where we need to keep "relevant data cached as long as possible" is in the frame
 //! types, specifically image frames. In order to be able to interpret the underlying data, we need
@@ -175,10 +195,10 @@
 //! access that data since we cache some of the small metadata (in this case, the format) on the
 //! Rust side.
 //!
-//! We do not typically copy / cache the underlying data from frames, as for e.g. a 720p image that
-//! involves a lot of copying and allocation, which is expensive and detrimental to users who want
-//! to build applications on top of realsense-rust while not sacrificing the speed or efficiency of
-//! the C or C++ librealsense2 APIs.
+//! We do not copy / cache the underlying data from frames, as for e.g. a 720p image that involves
+//! a lot of copying and allocation, which is expensive and detrimental to users who want to build
+//! applications on top of realsense-rust while not sacrificing the speed or efficiency of the C or
+//! C++ librealsense2 APIs.
 //!
 //! ### Make error cases explicit and differentiable
 //!
@@ -189,68 +209,44 @@
 //! error types are of the form:
 //!
 //! ```no_run
-//! pub enum SomeError {
-//!     CouldNotXXX(String),
-//! }
+//! pub enum SomeError { CouldNotXXX(Rs2Exception, String), }
 //! ```
 //!
 //! The enum field names should inform you what specific part of the function failed (if there are
-//! multiple parts), and the internal `String` is the exception message from librealsense2. If you
-//! find yourself hitting the same message often, this is a bug, and we would love if you [submitted
-//! a bug report](https://gitlab.com/tangram-vision-oss/realsense-rust/-/issues).
-//!
+//! multiple parts). The internal [`Rs2Exception`](crate::kind::Rs2Exception) should inform you
+//! what category of exception was returned from the underlying API. The internal `String` is the
+//! exception message from librealsense2. If you find yourself hitting the same message often, this
+//! is a bug, and we would love if you
+//! [submitted a bug report](https://gitlab.com/tangram-vision-oss/realsense-rust/-/issues).
 
 pub mod base;
 mod common;
-// pub mod config;
-// pub mod context;
+pub mod config;
+pub mod context;
 pub mod device;
-// pub mod device_hub;
-// pub mod device_list;
-pub mod error;
+pub mod device_hub;
+mod error;
 pub mod frame;
 pub mod kind;
-pub mod options;
-// pub mod pipeline;
-// pub mod pipeline_kind;
-// pub mod pipeline_profile;
+pub mod pipeline;
 pub mod sensor;
-pub mod stream;
+pub mod stream_profile;
 
 // pub mod frame_queue;
 // pub mod processing_block;
 // pub mod processing_block_kind;
 // pub mod processing_block_list;
 
-/// The mod collects common used traits from this crate.
+/// The module collects common used traits from this crate.
 pub mod prelude {
-    pub use crate::frame::{DepthFrameEx, DisparityFrameEx, VideoFrameEx};
+    pub use crate::frame::{DepthFrameEx, DisparityFrameEx, FrameEx, VideoFrameEx};
+    pub use crate::kind::Extension;
 }
 
-#[cfg(feature = "with-image")]
-pub use base::Rs2Image;
-pub use base::{Extrinsics, Intrinsics, MotionIntrinsics};
-// pub use config::Config;
-// pub use context::Context;
-pub use device::Device;
-// pub use device_hub::DeviceHub;
-// pub use device_list::{DeviceList, DeviceListIntoIter};
-pub use error::{Error, Result};
-pub use frame::{
-    DepthFrame, DepthFrameEx, DisparityFrame, DisparityFrameEx, VideoFrame, VideoFrameEx,
-};
 // pub use frame_queue::FrameQueue;
-pub use kind::{
-    ColorScheme, HoleFillingMode, PersistenceControl, Rs2CameraInfo, Rs2Extension, Rs2Format,
-    Rs2FrameMetadata, Rs2Option, Rs2StreamKind, Rs2TimestampDomain,
-};
-pub use options::{OptionHandle, ToOptions};
-// pub use pipeline::{ActivePipeline, InactivePipeline, Pipeline};
-// pub use pipeline_profile::PipelineProfile;
 // pub use processing_block::{
 //     Align, AnyProcessingBlock, Colorizer, DecimationFilter, DisparityFilter, HoleFillingFilter,
 //     HuffmanDepthDecompress, PointCloud, ProcessingBlock, RatesPrinter, SpatialFilter, Syncer,
 //     TemporalFilter, ThresholdFilter, UnitsTransform, YuyDecoder, ZeroOrderFilter,
 // };
 // pub use processing_block_list::{ProcessingBlockList, ProcessingBlockListIntoIter};
-pub use sensor::Sensor;

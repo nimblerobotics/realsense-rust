@@ -8,11 +8,12 @@
 
 use crate::{common::*, kind::Extension};
 use num_traits::ToPrimitive;
+use std::convert::{From, TryFrom};
 
 /// Holds the raw data pointer from an RS2 Composite frame type.
 pub struct CompositeFrame {
     /// The raw data pointer from the original rs2 frame
-    pub(crate) ptr: NonNull<sys::rs2_frame>,
+    pub ptr: NonNull<sys::rs2_frame>,
 }
 
 impl Drop for CompositeFrame {
@@ -21,6 +22,12 @@ impl Drop for CompositeFrame {
         unsafe {
             sys::rs2_release_frame(self.ptr.as_ptr());
         }
+    }
+}
+
+impl From<NonNull<sys::rs2_frame>> for CompositeFrame {
+    fn from(frame_ptr: NonNull<sys::rs2_frame>) -> Self {
+        Self { ptr: frame_ptr }
     }
 }
 
@@ -43,13 +50,22 @@ impl CompositeFrame {
         self.count() == 0
     }
 
-    /// Retrieves all frames in the Composite frame collection with the Extension provided.
+    /// Retrieves all frames in the Composite frame collection of a given type.
     ///
-    /// Returns `None` if the Composite frame collection does not contain the Extension
-    /// requested.
-    pub fn frames_of_extension<E>(&self) -> Option<Vec<E>>
+    /// # Generic Arguments
+    ///
+    /// `E` must implement [`Extension`](crate::kind::Extension). Some examples of good types to
+    /// use for this are:
+    ///
+    /// * [`VideoFrame`](crate::frame::VideoFrame)
+    /// * [`DepthFrame`](crate::frame::DepthFrame)
+    /// * [`DisparityFrame`](crate::frame::DisparityFrame)
+    /// * [`PoseFrame`](crate::frame::PoseFrame)
+    /// * [`PointsFrame`](crate::frame::PointsFrame)
+    ///
+    pub fn frames_of_extension<E>(&self) -> Vec<E>
     where
-        E: std::convert::TryFrom<NonNull<sys::rs2_frame>> + Extension,
+        E: TryFrom<NonNull<sys::rs2_frame>> + Extension,
     {
         let mut frames = Vec::new();
         for i in 0..self.count() {
@@ -80,10 +96,6 @@ impl CompositeFrame {
                 }
             }
         }
-        if frames.is_empty() {
-            None
-        } else {
-            Some(frames)
-        }
+        frames
     }
 }

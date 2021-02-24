@@ -2,10 +2,41 @@
 
 use crate::common::*;
 
-#[cfg(feature = "with-image")]
-pub use rs2_image::*;
-
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_millis(sys::RS2_DEFAULT_TIMEOUT as u64);
+
+// Thanks, Tenders McChiken.
+// https://stackoverflow.com/questions/38948669/whats-the-most-direct-way-to-convert-a-path-to-a-c-char
+pub(crate) fn from_path<P>(path: P) -> anyhow::Result<CString>
+where
+    P: AsRef<std::path::Path>,
+{
+    let mut buf = Vec::new();
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::ffi::OsStrExt;
+        buf.extend(path.as_ref().as_os_str().as_bytes());
+        buf.push(0);
+    };
+
+    #[cfg(windows)]
+    {
+        use std::os::windows::ffi::OsStrExt;
+        buf.extend(
+            path.as_ref()
+                .as_os_str()
+                .encode_wide()
+                .chain(Some(0))
+                .map(|b| {
+                    let b = b.to_ne_bytes();
+                    b.get(0).map(|s| *s).into_iter().chain(b.get(1).map(|s| *s))
+                })
+                .flatten(),
+        );
+    };
+
+    Ok(CString::new(buf)?)
+}
 
 /// The intrinsic parameters for motion devices.
 pub struct MotionIntrinsics(pub sys::rs2_motion_device_intrinsic);
@@ -117,46 +148,3 @@ impl AsMut<sys::rs2_extrinsics> for Extrinsics {
 
 unsafe impl Send for Extrinsics {}
 unsafe impl Sync for Extrinsics {}
-
-#[cfg(feature = "with-image")]
-mod rs2_image {
-    use super::*;
-
-    /// Image type returned by sensor.
-    ///
-    /// This is a wrapper of various [ImageBuffer](image::ImageBuffer) variants.
-    /// It pixel data is stored in slice for better performance.
-    #[derive(Debug, Clone)]
-    pub enum Rs2Image<'a> {
-        Bgr8(ImageBuffer<Bgr<u8>, &'a [u8]>),
-        Bgra8(ImageBuffer<Bgra<u8>, &'a [u8]>),
-        Rgb8(ImageBuffer<Rgb<u8>, &'a [u8]>),
-        Rgba8(ImageBuffer<Rgba<u8>, &'a [u8]>),
-        Luma16(ImageBuffer<Luma<u16>, &'a [u16]>),
-    }
-
-    /// Creates an owned image by coping underlying buffer.
-    impl<'a> Rs2Image<'a> {
-        pub fn to_owned(&self) -> DynamicImage {
-            self.into()
-        }
-    }
-
-    impl<'a> From<&Rs2Image<'a>> for DynamicImage {
-        fn from(from: &Rs2Image<'a>) -> DynamicImage {
-            match from {
-                Rs2Image::Bgr8(image) => DynamicImage::ImageBgr8(image.convert()),
-                Rs2Image::Bgra8(image) => DynamicImage::ImageBgra8(image.convert()),
-                Rs2Image::Rgb8(image) => DynamicImage::ImageRgb8(image.convert()),
-                Rs2Image::Rgba8(image) => DynamicImage::ImageRgba8(image.convert()),
-                Rs2Image::Luma16(image) => DynamicImage::ImageLuma16(image.convert()),
-            }
-        }
-    }
-
-    impl<'a> From<Rs2Image<'a>> for DynamicImage {
-        fn from(from: Rs2Image<'a>) -> DynamicImage {
-            (&from).into()
-        }
-    }
-}

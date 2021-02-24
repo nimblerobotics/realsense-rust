@@ -11,7 +11,7 @@ use crate::{
     common::*,
     kind::{Extension, Rs2Extension, Rs2FrameMetadata, Rs2TimestampDomain},
     sensor::Sensor,
-    stream::StreamProfile,
+    stream_profile::StreamProfile,
 };
 use anyhow::Result;
 use num_traits::ToPrimitive;
@@ -175,7 +175,7 @@ impl<'a> FrameEx<'a> for MotionFrame<'a> {
         }
     }
 
-    unsafe fn get_owned_frame_ptr(mut self) -> NonNull<sys::rs2_frame> {
+    unsafe fn get_owned_raw(mut self) -> NonNull<sys::rs2_frame> {
         self.should_drop = false;
 
         self.frame_ptr

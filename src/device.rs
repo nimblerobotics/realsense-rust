@@ -5,22 +5,26 @@
 //! comprise that device (IR cameras, depth camera, color camera, IMU) are referred to as sensors.
 //! See [`sensors`](crate::sensor) for more info.
 
-use crate::{check_rs2_error, kind::Rs2CameraInfo, sensor::Sensor};
+use crate::{
+    check_rs2_error,
+    kind::{Rs2CameraInfo, Rs2Exception},
+    sensor::Sensor,
+};
 use anyhow::Result;
 use num_traits::ToPrimitive;
 use realsense_sys as sys;
-use std::{convert::TryFrom, ffi::CStr, ptr::NonNull};
+use std::{convert::From, ffi::CStr, ptr::NonNull};
 use thiserror::Error;
 
 /// Enumeration of possible errors that can occur during device construction
 #[derive(Error, Debug)]
 pub enum DeviceConstructionError {
     /// System was unable to get the device pointer that corresponds to a given [`Sensor`]
-    #[error("Could not create device from sensor. Reason: {0}")]
-    CouldNotCreateDeviceFromSensor(String),
-    /// Could not generate the sensor list corresponding to the device during construction.
-    #[error("Could not generate sensor list for device. Reason: {0}")]
-    CouldNotGenerateSensorList(String),
+    #[error("Could not create device from sensor. Type: {0}; Reason: {1}")]
+    CouldNotCreateDeviceFromSensor(Rs2Exception, String),
+    /// Could not get device from device list
+    #[error("Could not get device from device list. Type: {0}; Reason: {1}")]
+    CouldNotGetDeviceFromDeviceList(Rs2Exception, String),
 }
 
 /// A type representing a RealSense device.
@@ -34,13 +38,11 @@ pub enum DeviceConstructionError {
 #[derive(Debug)]
 pub struct Device {
     device_ptr: NonNull<sys::rs2_device>,
-    sensor_list_ptr: NonNull<sys::rs2_sensor_list>,
 }
 
 impl Drop for Device {
     fn drop(&mut self) {
         unsafe {
-            sys::rs2_delete_sensor_list(self.sensor_list_ptr.as_ptr());
             sys::rs2_delete_device(self.device_ptr.as_ptr());
         }
     }
@@ -48,53 +50,70 @@ impl Drop for Device {
 
 unsafe impl Send for Device {}
 
-impl TryFrom<NonNull<sys::rs2_device>> for Device {
-    type Error = DeviceConstructionError;
-
+impl From<NonNull<sys::rs2_device>> for Device {
     /// Attempt to construct a Device from a non-null pointer to `rs2_device`.
     ///
-    /// Constructs a device from a pointer to an `rs2_device` type from the C-FFI, or returns an
-    /// error if the device and its corresponding sensor list cannot be obtained.
+    /// Constructs a device from a pointer to an `rs2_device` type from the C-FFI.
     ///
-    /// # Errors
-    ///
-    /// Returns [`DeviceConstructionError::CouldNotGenerateSensorList`] if the sensor list cannot
-    /// be captured during construction.
-    ///
-    fn try_from(device_ptr: NonNull<sys::rs2_device>) -> Result<Self, Self::Error> {
-        unsafe {
-            let mut err = std::ptr::null_mut::<sys::rs2_error>();
-
-            let sensor_list = sys::rs2_query_sensors(device_ptr.as_ptr(), &mut err);
-            check_rs2_error!(err, DeviceConstructionError::CouldNotGenerateSensorList)?;
-
-            Ok(Device {
-                device_ptr,
-                sensor_list_ptr: NonNull::new(sensor_list).unwrap(),
-            })
-        }
+    fn from(device_ptr: NonNull<sys::rs2_device>) -> Self {
+        Device { device_ptr }
     }
 }
 
 impl Device {
+    /// Attempt to construct a Device given a device list and index into the device list.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DeviceConstructionError::CouldNotGetDeviceFromDeviceList`] if the device cannot
+    /// be retrieved from the device list (e.g. if the index is invalid).
+    ///
+    pub(crate) fn try_create(
+        device_list: &NonNull<sys::rs2_device_list>,
+        index: i32,
+    ) -> Result<Self, DeviceConstructionError> {
+        unsafe {
+            let mut err = std::ptr::null_mut::<sys::rs2_error>();
+
+            let device_ptr = sys::rs2_create_device(device_list.as_ptr(), index, &mut err);
+            check_rs2_error!(
+                err,
+                DeviceConstructionError::CouldNotGetDeviceFromDeviceList
+            )?;
+
+            let nonnull_device_ptr = NonNull::new(device_ptr).unwrap();
+            Ok(Device::from(nonnull_device_ptr))
+        }
+    }
+
     /// Gets a list of sensors associated with the device.
     ///
     /// Returns a vector of zero size if any error occurs while trying to read the sensor list.
     /// This can occur if the physical device is disconnected before this call is made.
     ///
     pub fn sensors(&self) -> Vec<Sensor> {
-        let mut sensors = Vec::new();
         unsafe {
-            let mut err = std::ptr::null_mut::<sys::rs2_error>();
+            let mut sensors = Vec::new();
 
-            let len = sys::rs2_get_sensors_count(self.sensor_list_ptr.as_ptr(), &mut err);
+            let mut err = std::ptr::null_mut::<sys::rs2_error>();
+            let sensor_list_ptr = sys::rs2_query_sensors(self.device_ptr.as_ptr(), &mut err);
 
             if err.as_ref().is_some() {
                 return sensors;
             }
 
+            let nonnull_sensor_list = NonNull::new(sensor_list_ptr).unwrap();
+
+            let len = sys::rs2_get_sensors_count(nonnull_sensor_list.as_ptr(), &mut err);
+
+            if err.as_ref().is_some() {
+                sys::rs2_delete_sensor_list(nonnull_sensor_list.as_ptr());
+                return sensors;
+            }
+
+            sensors.reserve(len as usize);
             for i in 0..len {
-                match Sensor::try_create(&self.sensor_list_ptr, i) {
+                match Sensor::try_create(&nonnull_sensor_list, i) {
                     Ok(s) => {
                         sensors.push(s);
                     }
@@ -103,8 +122,9 @@ impl Device {
                     }
                 }
             }
+            sys::rs2_delete_sensor_list(nonnull_sensor_list.as_ptr());
+            sensors
         }
-        sensors
     }
 
     /// Takes ownership of the device and forces a hardware reset on the device.
@@ -169,5 +189,16 @@ impl Device {
 
             err.as_ref().is_none() && supports_info != 0
         }
+    }
+
+    /// Get the underlying low-level pointer to the context object
+    ///
+    /// # Safety
+    ///
+    /// This method is not intended to be called or used outside of the crate itself. Be warned, it
+    /// is _undefined behaviour_ to delete or try to drop this pointer in any context. If you do,
+    /// you risk a double-free or use-after-free error.
+    pub(crate) unsafe fn get_raw(&self) -> NonNull<sys::rs2_device> {
+        self.device_ptr
     }
 }

@@ -16,14 +16,15 @@ use crate::{
     check_rs2_error,
     device::{Device, DeviceConstructionError},
     kind::{
-        OptionSetError, Rs2CameraInfo, Rs2Extension, Rs2Option, Rs2OptionRange, SENSOR_EXTENSIONS,
+        OptionSetError, Rs2CameraInfo, Rs2Exception, Rs2Extension, Rs2Option, Rs2OptionRange,
+        SENSOR_EXTENSIONS,
     },
-    stream::StreamProfile,
+    stream_profile::StreamProfile,
 };
 use anyhow::Result;
 use num_traits::ToPrimitive;
 use realsense_sys as sys;
-use std::{convert::TryFrom, ffi::CStr, mem::MaybeUninit, ptr::NonNull};
+use std::{convert::From, ffi::CStr, mem::MaybeUninit, ptr::NonNull};
 use thiserror::Error;
 
 /// Type describing errors that can occur when trying to construct a sensor.
@@ -33,12 +34,9 @@ use thiserror::Error;
 /// from any C++ exceptions that occur.
 #[derive(Error, Debug)]
 pub enum SensorConstructionError {
-    /// Could not generate the stream profile list for the sensor at construction time.
-    #[error("Could not generate stream profile list for sensor. Reason: {0}")]
-    CouldNotGenerateStreamProfileList(String),
     /// Could not get the correct sensor from the sensor list.
-    #[error("Could not get correct sensor from sensor list. Reason: {0}")]
-    CouldNotGetSensorFromList(String),
+    #[error("Could not get correct sensor from sensor list. Type: {0}; Reason: {1}")]
+    CouldNotGetSensorFromList(Rs2Exception, String),
 }
 
 /// Type for holding sensor-related data.
@@ -58,10 +56,6 @@ pub struct Sensor {
     //
     // This should not be deleted unless the sensor was constructed via `rs2_create_sensor`
     sensor_ptr: NonNull<sys::rs2_sensor>,
-    // Pointer to this sensor's underlying stream profiles list.
-    //
-    // This is always deleted when the sensor is dropped.
-    stream_profiles_ptr: NonNull<sys::rs2_stream_profile_list>,
     // Boolean used for telling us if we should drop the sensor pointer or not.
     should_drop: bool,
 }
@@ -69,8 +63,6 @@ pub struct Sensor {
 impl Drop for Sensor {
     fn drop(&mut self) {
         unsafe {
-            sys::rs2_delete_stream_profiles_list(self.stream_profiles_ptr.as_ptr());
-
             if self.should_drop {
                 sys::rs2_delete_sensor(self.sensor_ptr.as_ptr());
             }
@@ -80,32 +72,12 @@ impl Drop for Sensor {
 
 unsafe impl Send for Sensor {}
 
-impl std::convert::TryFrom<NonNull<sys::rs2_sensor>> for Sensor {
-    type Error = SensorConstructionError;
-
+impl std::convert::From<NonNull<sys::rs2_sensor>> for Sensor {
     /// Attempt to construct a Sensor from a non-null pointer to `rs2_sensor`.
-    ///
-    /// # Errors
-    ///
-    /// This method will only fail if the stream profile list cannot be obtained from the
-    /// underlying `rs2_sensor`. The only error then is if this returns
-    /// [`SensorConstructionError::CouldNotGenerateStreamProfileList`].
-    ///
-    fn try_from(sensor_ptr: NonNull<sys::rs2_sensor>) -> Result<Self, Self::Error> {
-        unsafe {
-            let mut err = std::ptr::null_mut::<sys::rs2_error>();
-
-            let stream_profiles_ptr = sys::rs2_get_stream_profiles(sensor_ptr.as_ptr(), &mut err);
-            check_rs2_error!(
-                err,
-                SensorConstructionError::CouldNotGenerateStreamProfileList
-            )?;
-
-            Ok(Sensor {
-                sensor_ptr,
-                stream_profiles_ptr: NonNull::new(stream_profiles_ptr).unwrap(),
-                should_drop: false,
-            })
+    fn from(sensor_ptr: NonNull<sys::rs2_sensor>) -> Self {
+        Sensor {
+            sensor_ptr,
+            should_drop: false,
         }
     }
 }
@@ -133,9 +105,6 @@ impl Sensor {
     /// Returns [`SensorConstructionError::CouldNotGetSensorFromList`] if the index is invalid or
     /// if the sensor list is invalid in some way.
     ///
-    /// Returns [`SensorConstructionError::CouldNotGenerateStreamProfileList`] if the stream
-    /// profile list cannot be obtained during construction.
-    ///
     pub(crate) fn try_create(
         sensor_list: &NonNull<sys::rs2_sensor_list>,
         index: i32,
@@ -147,7 +116,7 @@ impl Sensor {
             check_rs2_error!(err, SensorConstructionError::CouldNotGetSensorFromList)?;
 
             let nonnull_ptr = NonNull::new(sensor_ptr).unwrap();
-            let mut sensor = Sensor::try_from(nonnull_ptr)?;
+            let mut sensor = Sensor::from(nonnull_ptr);
             sensor.should_drop = true;
             Ok(sensor)
         }
@@ -160,33 +129,25 @@ impl Sensor {
     ///
     /// # Errors
     ///
-    /// Returns
-    /// [`DeviceConstructionError::CouldNotCreateDeviceFromSensor`](crate::device::DeviceConstructionError::CouldNotCreateDeviceFromSensor)
-    /// if the device cannot be obtained due to the physical device being disconnected or the
-    /// internal sensor pointer becoming invalid.
+    /// Returns [`DeviceConstructionError::CouldNotCreateDeviceFromSensor`] if the device cannot be
+    /// obtained due to the physical device being disconnected or the internal sensor pointer
+    /// becoming invalid.
     ///
-    /// Returns
-    /// [`DeviceConstructionError::CouldNotGenerateSensorList`](crate::device::DeviceConstructionError::CouldNotGenerateSensorList)
-    /// if the sensor list cannot be captured during construction.
-    ///
-    pub fn device(&self) -> Result<Device> {
+    pub fn device(&self) -> Result<Device, DeviceConstructionError> {
         unsafe {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
             let device_ptr = sys::rs2_create_device_from_sensor(self.sensor_ptr.as_ptr(), &mut err);
             check_rs2_error!(err, DeviceConstructionError::CouldNotCreateDeviceFromSensor)?;
 
-            Ok(Device::try_from(NonNull::new(device_ptr).unwrap())?)
+            Ok(Device::from(NonNull::new(device_ptr).unwrap()))
         }
     }
 
-    /// List of all valid sensor extensions that apply to this sensor.
-    ///
-    /// See the [list of possible sensor extensions](crate::kind::Rs2Extension) for
-    /// more info.
-    pub fn extensions(&self) -> Vec<Rs2Extension> {
+    /// Get sensor extension.
+    pub fn extension(&self) -> Rs2Extension {
         SENSOR_EXTENSIONS
             .iter()
-            .filter_map(|ext| unsafe {
+            .find(|ext| unsafe {
                 let mut err = std::ptr::null_mut::<sys::rs2_error>();
                 let is_extendable = sys::rs2_is_sensor_extendable_to(
                     self.sensor_ptr.as_ptr(),
@@ -194,15 +155,10 @@ impl Sensor {
                     &mut err,
                 );
 
-                if err.as_ref().is_some() {
-                    None
-                } else if is_extendable != 0 {
-                    Some(*ext)
-                } else {
-                    None
-                }
+                err.as_ref().is_none() && is_extendable != 0
             })
-            .collect()
+            .unwrap()
+            .clone()
     }
 
     /// Get the value associated with the provided Rs2Option for the sensor.
@@ -364,27 +320,23 @@ impl Sensor {
         let mut profiles = Vec::new();
         unsafe {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
-
-            let len =
-                sys::rs2_get_stream_profiles_count(self.stream_profiles_ptr.as_ptr(), &mut err);
-
+            let profiles_ptr = sys::rs2_get_stream_profiles(self.sensor_ptr.as_ptr(), &mut err);
             if err.as_ref().is_some() {
                 return profiles;
             }
 
+            let nonnull_profiles_ptr =
+                NonNull::new(profiles_ptr as *mut sys::rs2_stream_profile_list).unwrap();
+
+            let len = sys::rs2_get_stream_profiles_count(nonnull_profiles_ptr.as_ptr(), &mut err);
+
+            if err.as_ref().is_some() {
+                sys::rs2_delete_stream_profiles_list(nonnull_profiles_ptr.as_ptr());
+                return profiles;
+            }
+
             for i in 0..len {
-                let profile_ptr =
-                    sys::rs2_get_stream_profile(self.stream_profiles_ptr.as_ptr(), i, &mut err);
-
-                if err.as_ref().is_some() {
-                    err = std::ptr::null_mut();
-                    continue;
-                }
-
-                let nonnull_ptr =
-                    NonNull::new(profile_ptr as *mut sys::rs2_stream_profile).unwrap();
-
-                match StreamProfile::try_from(nonnull_ptr) {
+                match StreamProfile::try_create(&nonnull_profiles_ptr, i) {
                     Ok(s) => {
                         profiles.push(s);
                     }
@@ -393,6 +345,7 @@ impl Sensor {
                     }
                 }
             }
+            sys::rs2_delete_stream_profiles_list(nonnull_profiles_ptr.as_ptr());
         }
         profiles
     }

@@ -18,10 +18,8 @@
 //! use num_traits::ToPrimitive;
 //! use crate::kind::Rs2Extension;
 //!
-//! fn main() {
-//!     let ext = Rs2Extension::ColorSensor;
-//!     println!("The extension is: {}", ext.to_u32().unwrap());
-//! }
+//! let ext = Rs2Extension::ColorSensor;
+//! println!("The extension is: {}", ext.to_u32().unwrap());
 //! ```
 //!
 //! In practice, most of the time you shouldn't need to wrap or unwrap `u32` values, and the API
@@ -47,20 +45,19 @@
 //! use realsense_sys as sys;
 //! use crate::kind::Rs2CameraInfo;
 //!
-//! fn main() {
-//!     for i in 0..sys::rs2_camera_info_RS2_CAMERA_INFO_COUNT {
-//!         println!(
-//!             "The enum variant {:?} corresponds to the u32 value {}",
-//!             Rs2CameraInfo::from_u32(i).unwrap(),
-//!             i,
-//!         );
-//!     }
+//! for i in 0..sys::rs2_camera_info_RS2_CAMERA_INFO_COUNT {
+//!     println!(
+//!         "The enum variant {:?} corresponds to the u32 value {}",
+//!         Rs2CameraInfo::from_u32(i).unwrap(),
+//!         i,
+//!     );
 //! }
 //! ```
 //!
 
 mod camera_info;
 mod color_scheme;
+mod exception;
 mod extension;
 mod format;
 mod frame_metadata;
@@ -68,11 +65,13 @@ mod hole_filling;
 mod option;
 mod persistence_control;
 mod prelude;
+mod product_line;
 mod stream_kind;
 mod timestamp_domain;
 
 pub use camera_info::Rs2CameraInfo;
 pub use color_scheme::ColorScheme;
+pub use exception::Rs2Exception;
 pub use extension::{
     Rs2Extension, DEVICE_EXTENSIONS, FILTER_EXTENSIONS, FRAME_EXTENSIONS, MISC_EXTENSIONS,
     PROFILE_EXTENSIONS, SENSOR_EXTENSIONS,
@@ -83,5 +82,6 @@ pub use hole_filling::HoleFillingMode;
 pub use option::{OptionSetError, Rs2Option, Rs2OptionRange};
 pub use persistence_control::PersistenceControl;
 pub use prelude::*;
+pub use product_line::Rs2ProductLine;
 pub use stream_kind::Rs2StreamKind;
 pub use timestamp_domain::Rs2TimestampDomain;

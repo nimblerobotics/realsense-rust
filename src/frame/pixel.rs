@@ -40,7 +40,7 @@ pub enum PixelKind<'a> {
     Y16 { y: &'a u16 },
     /// 16-bit linear depth values. The depth is meters is equal to depth scale * pixel value.
     Z16 { depth: &'a u16 },
-    /// TODO: Unknown...
+    /// 32-bit float-point depth distance value.
     Distance { distance: &'a f32 },
     /// 32-bit float-point disparity values. Depth->Disparity conversion : Disparity = Baseline*FocalLength/Depth.
     Disparity32 { disparity: &'a f32 },

@@ -1,13 +1,50 @@
-//! Type describing the stream profile information (format, stream kind, framerate, etc.)
+//! Types for representing data related to streams
+//!
+//! In librealsense2, a stream is an abstraction around a "sensor stream." In most applications,
+//! every sensor in the API will probably only have one stream that you actively care about (but
+//! not always!). That stream is tied to both the sensor it is configured on as well as the frames
+//! that are produced from the stream. The stream contains metadata such as the stream kind, the
+//! format of the incoming data, etc.
+//!
+//! There are two ways you can get streams in the system: from a stream profile list returned from
+//! the `Sensor`, or the frame stream from a frame type. In both cases the stream profile has an
+//! explicit lifetime that depends on the object you obtained it from. This is because stream
+//! profile ownership is not the same depending on how you obtained it.
+//!
+//! # Things to watch out for
+//!
+//! Extrinsics and intrinsics between different streams are obtained via the stream profile.
+//! However, your stream profile may not be valid if you get it from the frame. This is because
+//! stream profiles for the frame at a low level are owned by librealsense2. Calls to
+//! `rs2_get_frame_stream_profile` return a `*const rs2_stream_profile`, which is obtained by
+//! a call to C++ `shared_ptr::get()` internally to librealsense2. Since this is owned and managed
+//! by librealsense2, and calls to `shared_ptr::get()` aren't tracked by the internal ref-count on
+//! the `shared_ptr`, this means that the pointer could be invalidated at any time. In practice,
+//! this means that if you disconnect your device mid-way through streaming (i.e. yank the cable
+//! out), you could be holding onto a `StreamProfile` with an invalid internal pointer.
+//!
+//! We attempt to cache some aspects of the stream profile ahead of time, but in some cases this is
+//! not feasible (e.g. extrinsics). This is why some interfaces return `Result`s and others do not.
+//! The interfaces that do not return `Result` types are cached or otherwise safe-to-assume as
+//! such. The ones that do return `Result` types are will check the pointer at runtime and may
+//! return an error if it is no longer valid.
+//!
+//! We recommend that you get extrinsic or intrinsic information ahead of time when the device is
+//! connected (via `Device::sensor()` and then `Sensor::stream_profiles()`), rather than relying on
+//! the stream profile obtained via the frame types. The streams will have the same unique
+//! identifier if they correspond to the same stream.
+//!
+//! See [the `StreamProfile` type](crate::stream_profile::StreamProfile) for more information.
+//!
 
 use crate::{
     check_rs2_error,
-    kind::{Rs2Format, Rs2StreamKind},
+    kind::{Rs2Exception, Rs2Format, Rs2StreamKind},
 };
 use anyhow::Result;
 use num_traits::FromPrimitive;
 use realsense_sys as sys;
-use std::{marker::PhantomData, mem::MaybeUninit, ptr::NonNull};
+use std::{convert::TryFrom, marker::PhantomData, mem::MaybeUninit, ptr::NonNull};
 use thiserror::Error;
 
 /// Type describing errors that can occur when trying to construct a stream profile.
@@ -18,11 +55,16 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum StreamConstructionError {
     /// Could not get stream data during construction.
-    #[error("Could not retrieve stream data. Reason: {0}")]
-    CouldNotRetrieveStreamData(String),
+    #[error("Could not retrieve stream data. Type: {0}; Reason: {1}")]
+    CouldNotRetrieveStreamData(Rs2Exception, String),
     /// Could not determine if this stream is the default stream during construction.
-    #[error("Could not determine if this is the default stream. Reason: {0}")]
-    CouldNotDetermineIsDefault(String),
+    #[error("Could not determine if this is the default stream. Type: {0}; Reason: {1}")]
+    CouldNotDetermineIsDefault(Rs2Exception, String),
+    /// Could not get the stream profile from the stream profile list.
+    ///
+    /// Usually due to an internal exception of some kind.
+    #[error("Could not get the stream profile from a stream profile list. Type: {0}; Reason: {1}")]
+    CouldNotGetProfileFromList(Rs2Exception, String),
 }
 
 /// Type describing errors in getting or setting stream-related data.
@@ -33,11 +75,11 @@ pub enum StreamConstructionError {
 #[derive(Error, Debug)]
 pub enum DataError {
     /// Could not get extrinsics between the requested streams.
-    #[error("Could not get extrinsics. Reason: {0}")]
-    CouldNotGetExtrinsics(String),
+    #[error("Could not get extrinsics. Type: {0}; Reason: {1}")]
+    CouldNotGetExtrinsics(Rs2Exception, String),
     /// Could not set extrinsics between the requested streams.
-    #[error("Could not set extrinsics. Reason: {0}")]
-    CouldNotSetExtrinsics(String),
+    #[error("Could not set extrinsics. Type: {0}; Reason: {1}")]
+    CouldNotSetExtrinsics(Rs2Exception, String),
     /// This stream does not have video intrinsics.
     #[error("Stream does not have video intrinsics")]
     StreamDoesNotHaveVideoIntrinsics,
@@ -45,11 +87,11 @@ pub enum DataError {
     #[error("Stream does not have motion intrinsics")]
     StreamDoesNotHaveMotionIntrinsics,
     /// Could not get video intrinsics from the requested stream.
-    #[error("Could not get video intrinsics. Reason: {0}")]
-    CouldNotGetIntrinsics(String),
+    #[error("Could not get video intrinsics. Type: {0}; Reason: {1}")]
+    CouldNotGetIntrinsics(Rs2Exception, String),
     /// Could not get motion intrinsics from the requested stream.
-    #[error("Could not get motion intrinsics. Reason: {0}")]
-    CouldNotGetMotionIntrinsics(String),
+    #[error("Could not get motion intrinsics. Type: {0}; Reason: {1}")]
+    CouldNotGetMotionIntrinsics(Rs2Exception, String),
 }
 
 /// Type for holding the stream profile information.
@@ -71,6 +113,7 @@ pub enum DataError {
 /// for librealsense2, however this is a useful feature so as to encourage always grabbing the
 /// latest stream profile from the correct source.
 ///
+#[derive(Debug)]
 pub struct StreamProfile<'a> {
     // Underlying non-null pointer from realsense-sys.
     //
@@ -96,6 +139,10 @@ pub struct StreamProfile<'a> {
     framerate: i32,
     // Whether or not the stream is a default stream.
     is_default: bool,
+    // Whether or not we should drop the pointer ourselves
+    //
+    // This is dicated by ownership semantics specified by the underlying librealsense2 C-API.
+    should_drop: bool,
     // This phantom reference to a null tuple is required to enforce the lifetime of the entire
     // struct. The purpose of this is to ensure that stream profiles do not outlive their parent
     // components.
@@ -110,7 +157,17 @@ pub struct StreamProfile<'a> {
     _phantom: PhantomData<&'a ()>,
 }
 
-impl<'a> std::convert::TryFrom<NonNull<sys::rs2_stream_profile>> for StreamProfile<'a> {
+impl<'a> Drop for StreamProfile<'a> {
+    fn drop(&mut self) {
+        if self.should_drop {
+            unsafe {
+                sys::rs2_delete_stream_profile(self.ptr.as_ptr());
+            }
+        }
+    }
+}
+
+impl<'a> TryFrom<NonNull<sys::rs2_stream_profile>> for StreamProfile<'a> {
     type Error = StreamConstructionError;
 
     /// Attempt to create a stream profile from a pointer to an `rs2_stream_profile` type.
@@ -157,6 +214,11 @@ impl<'a> std::convert::TryFrom<NonNull<sys::rs2_stream_profile>> for StreamProfi
                 unique_id: unique_id.assume_init(),
                 framerate: framerate.assume_init(),
                 is_default: is_default != 0,
+                // We are not responsible for dropping this pointer by default.
+                // We are only responsible for dropping it if we obtained this pointer from a list.
+                // For safety's sake, use try_create(list, index) if you're trying to construct a
+                // stream profile from a stream profile list.
+                should_drop: false,
                 _phantom: PhantomData {},
             })
         }
@@ -164,6 +226,40 @@ impl<'a> std::convert::TryFrom<NonNull<sys::rs2_stream_profile>> for StreamProfi
 }
 
 impl<'a> StreamProfile<'a> {
+    /// Attempt to construct a stream profile from a profile list and index.
+    ///
+    /// Constructs a new stream profile from the list and index, or returns an error.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StreamConstructionError::CouldNotGetProfileFromList`] if the stream profile
+    /// cannot be acquired from the profile list. (e.g. index is invalid).
+    ///
+    /// Returns [`StreamConstructionError::CouldNotRetrieveStreamData`] if the stream data
+    /// associated with this stream profile cannot be retrieved.
+    ///
+    /// Returns [`StreamConstructionError::CouldNotDetermineIsDefault`] if it cannot be determined
+    /// whether or not this stream is a default stream. This usually will only happen if the stream
+    /// is invalidated (e.g. due to a device disconnect) when you try to construct it.
+    ///
+    pub(crate) fn try_create(
+        profiles: &NonNull<sys::rs2_stream_profile_list>,
+        index: i32,
+    ) -> Result<Self, StreamConstructionError> {
+        unsafe {
+            let mut err = std::ptr::null_mut::<sys::rs2_error>();
+            let profile_ptr = sys::rs2_get_stream_profile(profiles.as_ptr(), index, &mut err);
+            check_rs2_error!(err, StreamConstructionError::CouldNotGetProfileFromList)?;
+
+            let nonnull_profile_ptr =
+                NonNull::new(profile_ptr as *mut sys::rs2_stream_profile).unwrap();
+            let mut profile = Self::try_from(nonnull_profile_ptr)?;
+            // We are responsible for dropping the profile pointer if constructed from a list.
+            profile.should_drop = true;
+            Ok(profile)
+        }
+    }
+
     /// Predicate for whether or not the stream is a default stream.
     pub fn is_default(&self) -> bool {
         self.is_default

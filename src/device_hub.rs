@@ -1,64 +1,83 @@
-//! Defines the type of device hubs.
+//! Type representing the concept of a "hub" that devices can connect to.
 
-use crate::{
-    common::*,
-    device::Device,
-    error::{ErrorChecker, Result},
+use crate::{check_rs2_error, device::Device, kind::Rs2Exception};
+use anyhow::Result;
+use realsense_sys as sys;
+use std::{
+    convert::{From, TryFrom},
+    ptr::NonNull,
 };
+use thiserror::Error;
 
-/// Represents a collection of devices.
+/// Error describing when the device hub failed while attempting to wait for devices.
+///
+/// Can occur if there is an internal system exception while waiting for devices.
+#[derive(Error, Debug)]
+#[error("Could not wait for device due to internal error. Type: {0}; Reason: {1}")]
+pub struct CouldNotWaitForDeviceError(pub Rs2Exception, pub String);
+
+/// A type representing a hub for devices to connect to.
+///
+/// The device hub is a type used for waiting on a device connection or to check if a device is
+/// still connected.
 #[derive(Debug)]
 pub struct DeviceHub {
-    pub(crate) ptr: NonNull<sys::rs2_device_hub>,
-}
-
-impl DeviceHub {
-    /// Block and wait until a device is available.
-    pub fn wait_for_device(&self) -> Result<Device> {
-        let device = unsafe {
-            let mut checker = ErrorChecker::new();
-            let ptr =
-                sys::rs2_device_hub_wait_for_device(self.ptr.as_ptr(), checker.inner_mut_ptr());
-            checker.check()?;
-            Device::from_raw(ptr)
-        };
-        Ok(device)
-    }
-
-    /// Check whether the given device is connected to the device hub.
-    pub fn is_device_connected(&self, device: &Device) -> Result<bool> {
-        let val = unsafe {
-            let mut checker = ErrorChecker::new();
-            let val = sys::rs2_device_hub_is_device_connected(
-                self.ptr.as_ptr(),
-                device.ptr.as_ptr(),
-                checker.inner_mut_ptr(),
-            );
-            checker.check()?;
-            val
-        };
-        Ok(val != 0)
-    }
-
-    pub fn into_raw(self) -> *mut sys::rs2_device_hub {
-        let ptr = self.ptr;
-        mem::forget(self);
-        ptr.as_ptr()
-    }
-
-    pub unsafe fn from_raw(ptr: *mut sys::rs2_device_hub) -> Self {
-        Self {
-            ptr: NonNull::new(ptr).unwrap(),
-        }
-    }
+    devicehub_ptr: NonNull<sys::rs2_device_hub>,
 }
 
 impl Drop for DeviceHub {
     fn drop(&mut self) {
         unsafe {
-            sys::rs2_delete_device_hub(self.ptr.as_ptr());
+            sys::rs2_delete_device_hub(self.devicehub_ptr.as_ptr());
         }
     }
 }
 
 unsafe impl Send for DeviceHub {}
+
+impl From<NonNull<sys::rs2_device_hub>> for DeviceHub {
+    fn from(devicehub_ptr: NonNull<sys::rs2_device_hub>) -> Self {
+        Self { devicehub_ptr }
+    }
+}
+
+impl DeviceHub {
+    /// Gets a connected device, or waits for any device to be connected.
+    ///
+    /// If any device is connected, this method will return that device. It will cycle through
+    /// devices if multiple are connected. Otherwise, it blocks the calling thread until a device
+    /// is connected.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CouldNotWaitForDeviceError`] if an internal exception occurs while trying to wait
+    /// for device connections.
+    ///
+    /// Returns [`DeviceConstructionError`](crate::device::DeviceConstructionError) if a device is
+    /// found but an exception occurs during type construction.
+    ///
+    pub fn wait_for_device(&self) -> Result<Device> {
+        unsafe {
+            let mut err = std::ptr::null_mut::<sys::rs2_error>();
+            let device_ptr =
+                sys::rs2_device_hub_wait_for_device(self.devicehub_ptr.as_ptr(), &mut err);
+            check_rs2_error!(err, CouldNotWaitForDeviceError)?;
+
+            Ok(Device::try_from(NonNull::new(device_ptr).unwrap())?)
+        }
+    }
+
+    /// Predicate to check whether a given device is connected.
+    pub fn is_device_connected(&self, device: &Device) -> bool {
+        unsafe {
+            let mut err = std::ptr::null_mut::<sys::rs2_error>();
+            let val = sys::rs2_device_hub_is_device_connected(
+                self.devicehub_ptr.as_ptr(),
+                device.get_raw().as_ptr(),
+                &mut err,
+            );
+
+            err.as_ref().is_none() && val != 0
+        }
+    }
+}
