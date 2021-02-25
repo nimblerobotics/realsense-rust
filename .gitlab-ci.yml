@@ -1,6 +1,8 @@
 # CONFIGURATION
+image: 'registry.gitlab.com/tangram-vision-oss/realsense-rust/ci:latest'
 
 stages:
+  - test
   - doc
   - build_artifacts
 
@@ -13,20 +15,20 @@ before_script:
 # - [PASS REQ] runs all unit tests in the build
 # - [PASS REQ] runs a lint checker over every piece of code
 
-# test:
-#   stage: test
-#   script:
-#     - rustc --version
-#     - cargo --version
-#     - cargo test --verbose
-#
-# lint:
-#   stage: test
-#   script:
-#     - rustc --version
-#     - cargo --version
-#     - cargo clippy --all-targets --all-features -- -D warnings
-#
+test:
+  stage: test
+  script:
+    - rustc --version
+    - cargo --version
+#    - cargo test --verbose
+
+lint:
+  stage: test
+  script:
+    - rustc --version
+    - cargo --version
+#    - cargo clippy --all-targets --all-features -- -D warnings
+
 
 ##### ########## ########## ########## ########## #####
 # DOC STAGE

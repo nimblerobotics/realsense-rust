@@ -145,7 +145,7 @@ impl Sensor {
 
     /// Get sensor extension.
     pub fn extension(&self) -> Rs2Extension {
-        SENSOR_EXTENSIONS
+        let ext = SENSOR_EXTENSIONS
             .iter()
             .find(|ext| unsafe {
                 let mut err = std::ptr::null_mut::<sys::rs2_error>();
@@ -157,8 +157,8 @@ impl Sensor {
 
                 err.as_ref().is_none() && is_extendable != 0
             })
-            .unwrap()
-            .clone()
+            .unwrap();
+        *ext
     }
 
     /// Get the value associated with the provided Rs2Option for the sensor.
