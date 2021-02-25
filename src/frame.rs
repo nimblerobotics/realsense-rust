@@ -2,7 +2,6 @@
 
 mod composite;
 mod image;
-mod iter;
 mod motion;
 mod pixel;
 mod points;
@@ -15,4 +14,4 @@ pub use self::points::PointsFrame;
 pub use composite::CompositeFrame;
 pub use pixel::PixelKind;
 pub use pose::{Confidence, PoseFrame};
-pub use prelude::{DepthFrameEx, DisparityFrameEx, FrameConstructionError, FrameEx, VideoFrameEx};
+pub use prelude::{FrameConstructionError, FrameEx};

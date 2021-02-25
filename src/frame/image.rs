@@ -9,13 +9,10 @@
 //! Each frame type can hold data in multiple formats. The data type presented
 //! depends on the settings and flags used at runtime on the RealSense device.
 
+use super::pixel::{get_pixel, PixelKind};
 use super::prelude::{
-    CouldNotGetFrameSensorError, DepthError, DepthFrameEx, DisparityError, DisparityFrameEx,
-    FrameConstructionError, FrameEx, VideoFrameEx, VideoFrameUnsafeEx, BITS_PER_BYTE,
-};
-use super::{
-    iter::ImageIter,
-    pixel::{get_pixel, PixelKind},
+    CouldNotGetFrameSensorError, DepthError, DisparityError, FrameConstructionError, FrameEx,
+    BITS_PER_BYTE,
 };
 use crate::{
     check_rs2_error,
@@ -67,6 +64,33 @@ pub struct ImageFrame<'a, Kind> {
     _phantom: PhantomData<Kind>,
 }
 
+pub struct Iter<'a, K> {
+    pub(crate) frame: &'a ImageFrame<'a, K>,
+    pub(crate) column: usize,
+    pub(crate) row: usize,
+}
+
+impl<'a, K> Iterator for Iter<'a, K> {
+    type Item = PixelKind<'a>;
+
+    /// Provides a row-major iterator over an entire Image.
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.column >= self.frame.width() || self.row >= self.frame.height() {
+            return None;
+        }
+
+        let next = self.frame.get_unchecked(self.column, self.row);
+
+        self.column += 1;
+
+        if self.column >= self.frame.width() {
+            self.column = 0;
+            self.row += 1;
+        }
+        Some(next)
+    }
+}
+
 /// An ImageFrame type holding the raw pointer and derived metadata for an RS2 Depth frame.
 ///
 /// All fields in this struct are initialized during struct creation (via `try_from`).
@@ -86,17 +110,6 @@ pub type DisparityFrame<'a> = ImageFrame<'a, Disparity>;
 /// Frame is in scope... like normal Rust.
 pub type VideoFrame<'a> = ImageFrame<'a, Video>;
 
-impl<'a, K> ImageFrame<'a, K> {
-    /// Iterator through every [pixel](crate::frame::PixelKind) of an image frame.
-    pub fn iter(&'a self) -> ImageIter<'a, ImageFrame<'a, K>> {
-        ImageIter {
-            frame: self,
-            column: 0,
-            row: 0,
-        }
-    }
-}
-
 impl<'a, K> Drop for ImageFrame<'a, K> {
     fn drop(&mut self) {
         unsafe {
@@ -104,6 +117,15 @@ impl<'a, K> Drop for ImageFrame<'a, K> {
                 sys::rs2_release_frame(self.frame_ptr.as_ptr());
             }
         }
+    }
+}
+
+impl<'a, K> IntoIterator for &'a ImageFrame<'a, K> {
+    type Item = <Iter<'a, K> as Iterator>::Item;
+    type IntoIter = Iter<'a, K>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 
@@ -267,8 +289,16 @@ impl<'a, T> FrameEx<'a> for ImageFrame<'a, T> {
     }
 }
 
-impl<'a> DepthFrameEx for DepthFrame<'a> {
-    fn distance(&self, col: usize, row: usize) -> Result<f32, DepthError> {
+impl<'a> DepthFrame<'a> {
+    /// Given the 2D depth coordinate (x,y) provide the corresponding depth in metric units.
+    ///
+    /// # Warning
+    ///
+    /// It is fairly expensive to use this in practice as it will copy the underlying pixel into a
+    /// f32 value that gives you the direct distance. In practice getting
+    /// `DepthFrame::depth_units` and then applying that to the raw data with [`ImageFrame::get`]
+    /// is a much more efficient way to handle this.
+    pub fn distance(&self, col: usize, row: usize) -> Result<f32, DepthError> {
         unsafe {
             let mut err = ptr::null_mut::<sys::rs2_error>();
             let distance = sys::rs2_depth_frame_get_distance(
@@ -282,7 +312,8 @@ impl<'a> DepthFrameEx for DepthFrame<'a> {
         }
     }
 
-    fn depth_units(&self) -> Result<f32> {
+    /// Get the metric units currently used for reporting depth information.
+    pub fn depth_units(&self) -> Result<f32> {
         let sensor = self.sensor()?;
         let depth_units = sensor.get_option(Rs2Option::DepthUnits).ok_or_else(|| {
             anyhow::anyhow!("Option is not supported on the sensor for this frame type.")
@@ -291,8 +322,19 @@ impl<'a> DepthFrameEx for DepthFrame<'a> {
     }
 }
 
-impl<'a> DepthFrameEx for DisparityFrame<'a> {
-    fn distance(&self, col: usize, row: usize) -> Result<f32, DepthError> {
+impl<'a> DisparityFrame<'a> {
+    /// Given the 2D depth coordinate (x,y) provide the corresponding depth in metric units.
+    ///
+    /// # Warning
+    ///
+    /// Like with depth frames, this method is fairly expensive to use in practice. The disparity
+    /// can be converted to depth fairly easily, but this will effectively copy every pixel if you
+    /// loop through the data with this method for every index.
+    ///
+    /// It is often much more efficient to directly stream the
+    /// [`Rs2Format::Distance`](crate::kind::Rs2Format::Distance) format if you want the distance
+    /// directly, and access the frame data with [`ImageFrame::get`].
+    pub fn distance(&self, col: usize, row: usize) -> Result<f32, DepthError> {
         unsafe {
             let mut err = ptr::null_mut::<sys::rs2_error>();
             let distance = sys::rs2_depth_frame_get_distance(
@@ -306,17 +348,17 @@ impl<'a> DepthFrameEx for DisparityFrame<'a> {
         }
     }
 
-    fn depth_units(&self) -> Result<f32> {
+    /// Get the metric units currently used for reporting depth information.
+    pub fn depth_units(&self) -> Result<f32> {
         let sensor = self.sensor()?;
         let depth_units = sensor.get_option(Rs2Option::DepthUnits).ok_or_else(|| {
             anyhow::anyhow!("Option is not supported on the sensor for this frame type.")
         })?;
         Ok(depth_units)
     }
-}
 
-impl<'a> DisparityFrameEx for DisparityFrame<'a> {
-    fn baseline(&self) -> Result<f32, DisparityError> {
+    /// Get the baseline used during construction of the Disparity frame
+    pub fn baseline(&self) -> Result<f32, DisparityError> {
         unsafe {
             let mut err = ptr::null_mut::<sys::rs2_error>();
             let baseline =
@@ -327,8 +369,23 @@ impl<'a> DisparityFrameEx for DisparityFrame<'a> {
     }
 }
 
-impl<'a, K> VideoFrameUnsafeEx<'a> for ImageFrame<'a, K> {
-    fn get_unchecked(&'a self, col: usize, row: usize) -> PixelKind<'a> {
+impl<'a, K> ImageFrame<'a, K> {
+    /// Iterator through every [pixel](crate::frame::PixelKind) of an image frame.
+    pub fn iter(&'a self) -> Iter<'a, K> {
+        Iter {
+            frame: self,
+            column: 0,
+            row: 0,
+        }
+    }
+
+    /// Get a pixel value from the Video Frame.
+    ///
+    /// # Safety
+    ///
+    /// This makes a call directly to the underlying data pointer inherited from
+    /// the `rs2_frame`.
+    pub fn get_unchecked(&'a self, col: usize, row: usize) -> PixelKind<'a> {
         unsafe {
             get_pixel(
                 self.frame_stream_profile.format(),
@@ -341,46 +398,42 @@ impl<'a, K> VideoFrameUnsafeEx<'a> for ImageFrame<'a, K> {
         }
     }
 
-    fn stride(&self) -> usize {
+    /// Get the stride of this Video frame's pixel in bytes.
+    pub fn stride(&self) -> usize {
         self.stride
     }
 
-    fn bits_per_pixel(&self) -> usize {
+    /// Get the bits per pixel.
+    pub fn bits_per_pixel(&self) -> usize {
         self.bits_per_pixel
     }
 
-    fn get_raw_size(&self) -> usize {
+    /// Get the size of the data in this Video frame in bytes.
+    pub fn get_data_size(&self) -> usize {
         self.data_size_in_bytes
     }
 
-    fn get_raw(&'a self) -> &'a std::os::raw::c_void {
+    /// Get a reference to the raw data held by this Video frame.
+    pub fn get_data(&'a self) -> &'a std::os::raw::c_void {
         self.data
     }
-}
 
-impl<'a, K> VideoFrameEx<'a> for ImageFrame<'a, K> {
-    fn width(&self) -> usize {
+    /// Get the width of this Video frame in pixels
+    pub fn width(&self) -> usize {
         self.width
     }
 
-    fn height(&self) -> usize {
+    /// Get the height of this Video frame in pixels
+    pub fn height(&self) -> usize {
         self.height
     }
 
-    fn get(&'a self, col: usize, row: usize) -> Option<PixelKind<'a>> {
+    /// Given a row and column index, Get a pixel value from this frame.
+    pub fn get(&'a self, col: usize, row: usize) -> Option<PixelKind<'a>> {
         if col >= self.width || row >= self.height {
             None
         } else {
             Some(self.get_unchecked(col, row))
         }
-    }
-}
-
-impl<'a, K> IntoIterator for &'a ImageFrame<'a, K> {
-    type Item = <ImageIter<'a, ImageFrame<'a, K>> as Iterator>::Item;
-    type IntoIter = ImageIter<'a, ImageFrame<'a, K>>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
     }
 }

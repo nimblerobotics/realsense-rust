@@ -239,7 +239,7 @@ pub mod stream_profile;
 
 /// The module collects common used traits from this crate.
 pub mod prelude {
-    pub use crate::frame::{DepthFrameEx, DisparityFrameEx, FrameEx, VideoFrameEx};
+    pub use crate::frame::FrameEx;
     pub use crate::kind::Extension;
 }
 
