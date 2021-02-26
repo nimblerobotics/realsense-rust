@@ -1,16 +1,19 @@
 [package]
 name = "realsense-rust"
 description = "High-level RealSense library in Rust"
-version = "0.5.0"
-authors = ["jerry73204 <jerry73204@gmail.com>"]
+version = "0.5.1"
+authors = ["jerry73204 <jerry73204@gmail.com>", "Jeremy Steward <jeremy.steward@tangramvision.com>", "Brandon Minor <brandon@tangramvision.com"]
 edition = "2018"
 license = "Apache-2.0"
 documentation = "https://docs.rs/realsense-rust/"
-homepage = "https://github.com/jerry73204/realsense-rust"
-repository = "https://github.com/jerry73204/realsense-rust"
+keywords = ["Intel", "RealSense", "sensor", "robotics"]
+categories = ["external-ffi-bindings", "computer-vision", "hardware-support"]
+readme = "README.md"
+homepage = "https://gitlab.com/tangram-vision-oss/realsense-rust"
+repository = "https://gitlab.com/tangram-vision-oss/realsense-rust"
 
 [dependencies]
-realsense-sys = { version = "0.3.0", path = "realsense-sys" }
+realsense-sys = { version = "0.3.1", path = "realsense-sys" }
 num-derive = "0.3"
 num-traits = "0.2"
 nalgebra = { version = "0.23", optional = true }
