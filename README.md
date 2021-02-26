@@ -3,6 +3,11 @@
 The project provides high-level bindings to librealsense2 library as well as low-level FFI interface.
 It supports asynchronous API and integration with [image](https://github.com/image-rs/image) and [nalgebra](https://github.com/rustsim/nalgebra) types.
 
+This project is hosted on both [Github](https://github.com/Tangram-Vision/realsense-rust) and
+[Gitlab](https://gitlab.com/tangram-vision-oss/realsense-rust/). While we're happy to receive pull / merge requests on
+either platform, we focus most of our work on Gitlab, so please submit an issue there if you've found something we need
+to improve, or if you have a question regarding how the software works!
+
 ## Use this crate in your project
 
 Make sure **librealsense 2.39.0** is installed on your system. You may visit [RealSense official repository](https://github.com/IntelRealSense/librealsense).
