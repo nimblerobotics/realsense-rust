@@ -1,27 +1,40 @@
-# RealSense bindings for Rust
+# RealSense Bindings for Rust
 
 The project provides high-level bindings (crate `realsense_rust`) to librealsense2 library as well as low-level FFI
 (crate `realsense_sys`) interface.
 
+**Current librealsense version: 2.41.0**
+
 This project is hosted on both [Github](https://github.com/Tangram-Vision/realsense-rust) and
 [Gitlab](https://gitlab.com/tangram-vision-oss/realsense-rust/). While we're happy to receive pull / merge requests on
 either platform, we focus most of our work on Gitlab, so please submit an issue there if you've found something we need
-to improve, or if you have a question regarding how the software works!
+to improve or have a question regarding how things work.
 
-## Use this crate in your project
+## Hardware Considerations
 
-Make sure **librealsense 2.41.0** is installed on your system. You may visit [RealSense official
-repository](https://github.com/IntelRealSense/librealsense).
+- **USB Current Draw**: Many RealSense devices draw more current than a standard USB cable can provide. For example,
+  standard USB can run 0.9 amps, while the RealSense 435i draws 2 amps. Using a USB cable that doesn't have the right
+  current capability will interfere with the USB connection on the host, and the device will seem to disconnect. A
+  device power cycle doesn't always remedy this, either. In many cases, the host USB hub itself will need a reset. Make
+  sure any USB cables used are able to draw at least 2 amps. Read more on the issue
+  [here](https://support.intelrealsense.com/hc/en-us/community/posts/360033595714-D435-USB-connection-issues).
 
-Add this crate to your `Cargo.toml`:
+## API Use
+
+Make sure librealsense 2.41.0 is installed on your system. Visit the [RealSense official
+repository](https://github.com/IntelRealSense/librealsense) to download and install this on the host machine.
+
+Once that's done, add this crate to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
 realsense-rust = "0.5"
 ```
 
-If you're using older librealsense for reasons. You may enable
-`buildtime-bindgen` to re-generate bindings and good luck.
+...and you should be good to go!
+
+**Backwards compatibility**: If you're using an older librealsense version, you may enable `buildtime-bindgen` to
+re-generate the bindings. We make no claims of backwards compatibility; good luck.
 
 ```toml
 [dependencies]
@@ -33,58 +46,10 @@ realsense-rust = { version = "0.5", features = ["buildtime-bindgen"] }
 - **with-nalgebra** (default): Enable [nalgebra](https://github.com/rustsim/nalgebra) support.
 - **buildtime-bindgen**: Generate Rust bindings during build time.
 
-## Get Started
+## Getting started + Examples
 
-You can start by using `InactivePipeline`. This is the minimal example to capture color and depth images.
-
-```rust
-use anyhow::Result;
-use realsense_rust::{
-    config::Config,
-    kind::{Rs2Format, Rs2StreamKind},
-    pipeline::{
-        InactivePipeline,
-        ActivePipeline
-    },
-};
-use std::convert::TryFrom;
-
-fn main() -> Result<()> {
-    let context = Context::new()?;
-    let pipeline = InactivePipeline::try_from(context)?;
-
-    let config = Config::new()?;
-    config
-        .enable_stream(Rs2StreamKind::Depth, 0, 640, 0, Rs2Format::Z16, 30)?
-        .enable_stream(Rs2StreamKind::Color, 0, 640, 0, Rs2Format::Rgb8, 30)?;
-
-    let mut pipeline = pipeline.start(&config)?;
-
-    let frames = pipeline.wait(None)?;
-    let video_frames = frames.frames_of_extension::<VideoFrame>();
-    let depth_frames = frames.frames_of_extension::<DepthFrame>();
-
-    for f in video_frames {
-        // process video / color frames
-    }
-
-    for d in depth_frames {
-        // process depth frames
-    }
-
-    Ok(())
-}
-```
-
-## Examples
-
-To capture image with your RealSense device,
-
-```sh
-cargo run --release --example capture_images
-```
-
-More examples can be found in [examples](examples) directory.
+Check out the examples folder for minimal configurations that fit your device. We have included a README.md there that
+explains the functionality that one can get from this API. For more explanation, see the crate documentation.
 
 ## Contributing to this project
 
@@ -107,8 +72,7 @@ and you can call low level C functions.
 
 ### Generate documents from source code
 
-The API changes may not be found on docs.rs. To generate document from the most
-recent commit,
+The API changes may not be found on docs.rs. To generate document from the most recent commit,
 
 ```sh
 cargo doc --open

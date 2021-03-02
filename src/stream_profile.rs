@@ -139,10 +139,6 @@ pub struct StreamProfile<'a> {
     framerate: i32,
     // Whether or not the stream is a default stream.
     is_default: bool,
-    // Whether or not we should drop the pointer ourselves
-    //
-    // This is dicated by ownership semantics specified by the underlying librealsense2 C-API.
-    should_drop: bool,
     // This phantom reference to a null tuple is required to enforce the lifetime of the entire
     // struct. The purpose of this is to ensure that stream profiles do not outlive their parent
     // components.
@@ -155,16 +151,6 @@ pub struct StreamProfile<'a> {
     // This is more or less just a means to prevent users from violating ownership / lifetime
     // semantics across the FFI boundary.
     _phantom: PhantomData<&'a ()>,
-}
-
-impl<'a> Drop for StreamProfile<'a> {
-    fn drop(&mut self) {
-        if self.should_drop {
-            unsafe {
-                sys::rs2_delete_stream_profile(self.ptr.as_ptr());
-            }
-        }
-    }
 }
 
 impl<'a> TryFrom<NonNull<sys::rs2_stream_profile>> for StreamProfile<'a> {
@@ -214,11 +200,6 @@ impl<'a> TryFrom<NonNull<sys::rs2_stream_profile>> for StreamProfile<'a> {
                 unique_id: unique_id.assume_init(),
                 framerate: framerate.assume_init(),
                 is_default: is_default != 0,
-                // We are not responsible for dropping this pointer by default.
-                // We are only responsible for dropping it if we obtained this pointer from a list.
-                // For safety's sake, use try_create(list, index) if you're trying to construct a
-                // stream profile from a stream profile list.
-                should_drop: false,
                 _phantom: PhantomData {},
             })
         }
@@ -253,10 +234,7 @@ impl<'a> StreamProfile<'a> {
 
             let nonnull_profile_ptr =
                 NonNull::new(profile_ptr as *mut sys::rs2_stream_profile).unwrap();
-            let mut profile = Self::try_from(nonnull_profile_ptr)?;
-            // We are responsible for dropping the profile pointer if constructed from a list.
-            profile.should_drop = true;
-            Ok(profile)
+            Ok(Self::try_from(nonnull_profile_ptr)?)
         }
     }
 

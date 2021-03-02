@@ -26,16 +26,20 @@ use num_traits::ToPrimitive;
 use std::convert::TryFrom;
 
 /// A unit struct defining a Depth frame.
+#[derive(Debug)]
 pub struct Depth;
 /// A unit struct defining a Disparity frame.
+#[derive(Debug)]
 pub struct Disparity;
 /// A unit struct defining a Video frame.
+#[derive(Debug)]
 pub struct Video;
 
 /// Holds the raw data pointer and derived data for an RS2 Image frame.
 ///
 /// This generic type isn't particularly useful on it's own. In all cases, you want a specialized
 /// version of this class ([`DepthFrame`], [`VideoFrame`], [`DisparityFrame`]).
+#[derive(Debug)]
 pub struct ImageFrame<'a, Kind> {
     /// The raw data pointer from the original rs2 frame.
     frame_ptr: NonNull<sys::rs2_frame>,

@@ -17,6 +17,7 @@ use num_traits::ToPrimitive;
 use std::convert::TryFrom;
 
 /// Holds information describing the motion and position of a device at a point in time.
+#[derive(Debug)]
 pub struct PoseFrame<'a> {
     /// The raw data pointer from the original rs2 frame.
     frame_ptr: NonNull<sys::rs2_frame>,

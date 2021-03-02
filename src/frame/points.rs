@@ -19,6 +19,7 @@ use std::convert::TryFrom;
 /// All fields in this struct are initialized during struct creation (via `try_from`).
 /// Everything called from here during runtime should be valid as long as the
 /// Frame is in scope... like normal Rust.
+#[derive(Debug)]
 pub struct PointsFrame<'a> {
     /// The raw data pointer from the original rs2 frame.
     frame_ptr: NonNull<sys::rs2_frame>,
