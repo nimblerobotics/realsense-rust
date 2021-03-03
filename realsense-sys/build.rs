@@ -64,13 +64,6 @@ fn main() -> Result<()> {
                     .unwrap(),
             )
             .header(include_dir.join("h").join("rs_config.h").to_str().unwrap())
-            .header(
-                CARGO_MANIFEST_DIR
-                    .join("c")
-                    .join("rsutil_delegate.h")
-                    .to_str()
-                    .unwrap(),
-            )
             .whitelist_var("RS2_.*")
             .whitelist_type("rs2_.*")
             .whitelist_function("rs2_.*")
@@ -87,13 +80,6 @@ fn main() -> Result<()> {
             .write_to_file(bindings_file)
             .expect("Couldn't write bindings!");
     }
-
-    // compile and link rsutil_delegate.h statically
-    cc::Build::new()
-        .include(&include_dir)
-        .include(CARGO_MANIFEST_DIR.join("c"))
-        .file(CARGO_MANIFEST_DIR.join("c").join("rsutil_delegate.c"))
-        .compile("rsutil_delegate");
 
     // link the librealsense2 shared library
     println!("cargo:rustc-link-lib=realsense2");

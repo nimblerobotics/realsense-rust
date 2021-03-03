@@ -112,3 +112,20 @@ pub enum Rs2Format {
     //
     // Count = sys::rs2_format_RS2_FORMAT_COUNT,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use num_traits::FromPrimitive;
+
+    #[test]
+    fn all_variants_exist() {
+        for i in 0..sys::rs2_format_RS2_FORMAT_COUNT {
+            assert!(
+                Rs2Format::from_u32(i).is_some(),
+                "Rs2Format variant for ordinal {} does not exist.",
+                i
+            );
+        }
+    }
+}

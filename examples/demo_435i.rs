@@ -2,7 +2,7 @@ use anyhow::{ensure, Result};
 use realsense_rust::{
     config::Config,
     context::Context,
-    frame::{DepthFrame, MotionFrame},
+    frame::{DepthFrame, GyroFrame},
     kind::{Rs2CameraInfo, Rs2Format, Rs2ProductLine, Rs2StreamKind},
     pipeline::InactivePipeline,
 };
@@ -22,9 +22,15 @@ pub fn main() -> Result<()> {
     config
         .enable_device_from_serial(devices[0].info(Rs2CameraInfo::SerialNumber).unwrap())?
         .disable_all_streams()?
-        .enable_stream(Rs2StreamKind::Depth, 0, 640, 0, Rs2Format::Z16, 30)?
-        .enable_stream(Rs2StreamKind::Color, 0, 640, 0, Rs2Format::Rgb8, 30)?
-        .enable_stream(Rs2StreamKind::Gyro, 0, 0, 0, Rs2Format::Any, 0)?;
+        .enable_stream(Rs2StreamKind::Depth, None, 640, 0, Rs2Format::Z16, 30)?
+        .enable_stream(Rs2StreamKind::Color, None, 640, 0, Rs2Format::Rgb8, 30)?
+        // RealSense doesn't seem to like index zero for the IR cameras on D435i
+        //
+        // Really not sure why? This seems like an implementation issue, but in practice most
+        // won't be after the IR image directly.
+        .enable_stream(Rs2StreamKind::Infrared, Some(1), 640, 0, Rs2Format::Y8, 30)?
+        .enable_stream(Rs2StreamKind::Infrared, Some(2), 640, 0, Rs2Format::Y8, 30)?
+        .enable_stream(Rs2StreamKind::Gyro, None, 0, 0, Rs2Format::Any, 0)?;
     // Change pipeline's type from InactivePipeline -> ActivePipeline
     let mut pipeline = pipeline.start(Some(&config))?;
     let mut distance = 0.0;
@@ -36,7 +42,7 @@ pub fn main() -> Result<()> {
         let frames = pipeline.wait(Some(timeout))?;
 
         // Get depth
-        let mut depth_frames = frames.frames_of_extension::<DepthFrame>();
+        let mut depth_frames = frames.frames_of_type::<DepthFrame>();
         if !depth_frames.is_empty() {
             let depth_frame = depth_frames.pop().unwrap();
             let tmp_distance =
@@ -48,9 +54,9 @@ pub fn main() -> Result<()> {
 
         if i % 10 == 0 {
             // Get gyro
-            let motion_frames = frames.frames_of_extension::<MotionFrame>();
+            let motion_frames = frames.frames_of_type::<GyroFrame>();
             if !motion_frames.is_empty() {
-                motion = *motion_frames[0].motion();
+                motion = *motion_frames[0].rotational_velocity();
             }
         }
 

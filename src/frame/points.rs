@@ -2,11 +2,11 @@
 //!
 //! A Points frame is a RealSense point cloud storage class.
 
-use super::prelude::{CouldNotGetFrameSensorError, FrameConstructionError, FrameEx};
+use super::prelude::{CouldNotGetFrameSensorError, FrameCategory, FrameConstructionError, FrameEx};
 use crate::{
     check_rs2_error,
     common::*,
-    kind::{Extension, Rs2Extension, Rs2FrameMetadata, Rs2TimestampDomain},
+    kind::{Rs2Extension, Rs2FrameMetadata, Rs2TimestampDomain},
     sensor::Sensor,
     stream_profile::StreamProfile,
 };
@@ -40,14 +40,22 @@ pub struct PointsFrame<'a> {
     should_drop: bool,
 }
 
-impl<'a> Extension for PointsFrame<'a> {
+impl<'a> FrameCategory for PointsFrame<'a> {
     fn extension() -> Rs2Extension {
         Rs2Extension::Points
+    }
+
+    fn kind() -> Rs2StreamKind {
+        Rs2StreamKind::Any
+    }
+
+    fn has_correct_kind(&self) -> bool {
+        self.frame_stream_profile.kind() == Self::kind()
     }
 }
 
 impl<'a> FrameEx<'a> for PointsFrame<'a> {
-    fn profile(&'a self) -> &'a StreamProfile<'a> {
+    fn stream_profile(&'a self) -> &'a StreamProfile<'a> {
         &self.frame_stream_profile
     }
 
@@ -82,9 +90,13 @@ impl<'a> FrameEx<'a> for PointsFrame<'a> {
                 metadata_kind.to_u32().unwrap(),
                 &mut err,
             );
-            err.as_ref()?;
 
-            Some(val)
+            if err.as_ref().is_none() {
+                Some(val)
+            } else {
+                sys::rs2_free_error(err);
+                None
+            }
         }
     }
 
@@ -98,7 +110,12 @@ impl<'a> FrameEx<'a> for PointsFrame<'a> {
                 &mut err,
             );
 
-            err.as_ref().is_none() && supports_metadata != 0
+            if err.as_ref().is_none() {
+                supports_metadata != 0
+            } else {
+                sys::rs2_free_error(err);
+                false
+            }
         }
     }
 
@@ -217,5 +234,15 @@ impl<'a> PointsFrame<'a> {
     /// Gets number of points in the point cloud.
     pub fn points_count(&self) -> usize {
         self.num_points
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn frame_has_correct_kind() {
+        assert_eq!(PointsFrame::kind(), Rs2StreamKind::Any);
     }
 }

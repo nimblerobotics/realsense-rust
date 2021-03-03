@@ -25,6 +25,8 @@
 /// The latter part may seem confusing, but more or less we aim for:
 ///
 /// ```no_run
+/// use realsense_rust::kind::Rs2Exception;
+///
 /// pub enum MyError {
 ///     // This can be used with the macro
 ///     FooOccurred(Rs2Exception, String),
@@ -38,7 +40,7 @@
 /// }
 ///
 /// // This can be used with the macro as well
-/// pub struct YourError(pub Rs2Exception, pub String)
+/// pub struct YourError(pub Rs2Exception, pub String);
 /// ```
 ///
 /// Why this form? Every `*mut rs2_error` will provide us with some information per the underlying
@@ -90,8 +92,8 @@
 /// this macro the expression returns, which means that if you fail to check the result the
 /// compiler will warn you.
 ///
-/// ```no_run
-/// check_rs2_error!(err, MyError::FooError);
+/// ```ignore
+/// check_rs2_error!(err, MyError::FooOccurred);
 /// ```
 ///
 /// Notice how that expression doesn't end in a `?` character? The compiler will shout at you. In
@@ -112,7 +114,7 @@
 ///
 /// # Examples
 ///
-/// ```no_run
+/// ```ignore
 /// use realsense_sys as sys;
 ///
 /// pub struct MyError(pub Rs2Exception, String);

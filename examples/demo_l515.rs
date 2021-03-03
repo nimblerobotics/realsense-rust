@@ -27,8 +27,8 @@ pub fn main() -> Result<()> {
     config
         .enable_device_from_serial(devices[0].info(Rs2CameraInfo::SerialNumber).unwrap())?
         .disable_all_streams()?
-        .enable_stream(Rs2StreamKind::Depth, 0, 320, 0, Rs2Format::Z16, 30)?
-        .enable_stream(Rs2StreamKind::Infrared, 0, 320, 0, Rs2Format::Y8, 30)?;
+        .enable_stream(Rs2StreamKind::Depth, None, 320, 0, Rs2Format::Z16, 30)?
+        .enable_stream(Rs2StreamKind::Infrared, None, 320, 0, Rs2Format::Y8, 30)?;
     // Change pipeline's type from InactivePipeline -> ActivePipeline
     let mut pipeline = pipeline.start(Some(&config))?;
 
@@ -38,7 +38,7 @@ pub fn main() -> Result<()> {
         let timeout = Duration::from_millis(5000);
         let frames = pipeline.wait(Some(timeout))?;
 
-        let mut depth_frames = frames.frames_of_extension::<DepthFrame>();
+        let mut depth_frames = frames.frames_of_type::<DepthFrame>();
         if depth_frames.is_empty() {
             continue;
         }

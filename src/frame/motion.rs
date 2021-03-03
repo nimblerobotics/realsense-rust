@@ -5,11 +5,11 @@
 //!
 //! See the docs for [MotionFrame::motion] for more.
 
-use super::prelude::{CouldNotGetFrameSensorError, FrameConstructionError, FrameEx};
+use super::prelude::{CouldNotGetFrameSensorError, FrameCategory, FrameConstructionError, FrameEx};
 use crate::{
     check_rs2_error,
     common::*,
-    kind::{Extension, Rs2Extension, Rs2FrameMetadata, Rs2TimestampDomain},
+    kind::{Rs2Extension, Rs2FrameMetadata, Rs2TimestampDomain},
     sensor::Sensor,
     stream_profile::StreamProfile,
 };
@@ -17,13 +17,20 @@ use anyhow::Result;
 use num_traits::ToPrimitive;
 use std::convert::TryFrom;
 
+/// A unit struct defining an Accel frame.
+#[derive(Debug)]
+pub struct Accel;
+/// A unit struct defining a Gyro frame.
+#[derive(Debug)]
+pub struct Gyro;
+
 /// Holds the raw data pointer and derived data from an RS2 Motion Frame.
 ///
 /// All fields in this struct are initialized during struct creation (via `try_from`).
 /// Everything called from here during runtime should be valid as long as the
 /// Frame is in scope... like normal Rust.
 #[derive(Debug)]
-pub struct MotionFrame<'a> {
+pub struct MotionFrame<'a, Kind> {
     /// The raw data pointer from the original rs2 frame.
     frame_ptr: NonNull<sys::rs2_frame>,
     /// The timestamp of the frame.
@@ -39,15 +46,44 @@ pub struct MotionFrame<'a> {
     /// A boolean used during `Drop` calls. This allows for proper handling of the pointer
     /// during ownership transfer.
     should_drop: bool,
+    /// Holds the type metadata of this frame.
+    _phantom: PhantomData<Kind>,
 }
 
-impl<'a> Extension for MotionFrame<'a> {
+/// A motion frame type holding the raw pointer and derived metadata for an RS2 Accel frame.
+pub type AccelFrame<'a> = MotionFrame<'a, Accel>;
+/// A motion frame type holding the raw pointer and derived metadata for an RS2 Gyro frame.
+pub type GyroFrame<'a> = MotionFrame<'a, Gyro>;
+
+impl<'a> FrameCategory for AccelFrame<'a> {
     fn extension() -> Rs2Extension {
         Rs2Extension::MotionFrame
     }
+
+    fn kind() -> Rs2StreamKind {
+        Rs2StreamKind::Accel
+    }
+
+    fn has_correct_kind(&self) -> bool {
+        self.frame_stream_profile.kind() == Self::kind()
+    }
 }
 
-impl<'a> Drop for MotionFrame<'a> {
+impl<'a> FrameCategory for GyroFrame<'a> {
+    fn extension() -> Rs2Extension {
+        Rs2Extension::MotionFrame
+    }
+
+    fn kind() -> Rs2StreamKind {
+        Rs2StreamKind::Gyro
+    }
+
+    fn has_correct_kind(&self) -> bool {
+        self.frame_stream_profile.kind() == Self::kind()
+    }
+}
+
+impl<'a, K> Drop for MotionFrame<'a, K> {
     /// Drop the raw pointer stored with this struct whenever it goes out of scope.
     fn drop(&mut self) {
         unsafe {
@@ -58,9 +94,9 @@ impl<'a> Drop for MotionFrame<'a> {
     }
 }
 
-unsafe impl<'a> Send for MotionFrame<'a> {}
+unsafe impl<'a, K> Send for MotionFrame<'a, K> {}
 
-impl<'a> TryFrom<NonNull<sys::rs2_frame>> for MotionFrame<'a> {
+impl<'a, K> TryFrom<NonNull<sys::rs2_frame>> for MotionFrame<'a, K> {
     type Error = anyhow::Error;
 
     /// Attempt to create an Image frame of extension K from the raw `rs2_frame`. All
@@ -104,10 +140,10 @@ impl<'a> TryFrom<NonNull<sys::rs2_frame>> for MotionFrame<'a> {
             check_rs2_error!(err, FrameConstructionError::CouldNotGetData)?;
 
             let data_as_ptr = ptr.as_ref().unwrap() as *const std::os::raw::c_void;
-            let motion_raw = std::slice::from_raw_parts(
-                data_as_ptr.cast::<f32>(),
-                size as usize / std::mem::size_of::<f32>(),
-            );
+            let data_size_in_f32s = (size as usize) / std::mem::size_of::<f32>();
+
+            let motion_raw =
+                std::slice::from_raw_parts(data_as_ptr.cast::<f32>(), data_size_in_f32s);
 
             Ok(MotionFrame {
                 frame_ptr,
@@ -116,13 +152,14 @@ impl<'a> TryFrom<NonNull<sys::rs2_frame>> for MotionFrame<'a> {
                 frame_stream_profile: profile,
                 motion: [motion_raw[0], motion_raw[1], motion_raw[2]],
                 should_drop: true,
+                _phantom: PhantomData::<K> {},
             })
         }
     }
 }
 
-impl<'a> FrameEx<'a> for MotionFrame<'a> {
-    fn profile(&'a self) -> &'a StreamProfile<'a> {
+impl<'a, K> FrameEx<'a> for MotionFrame<'a, K> {
+    fn stream_profile(&'a self) -> &'a StreamProfile<'a> {
         &self.frame_stream_profile
     }
 
@@ -156,9 +193,12 @@ impl<'a> FrameEx<'a> for MotionFrame<'a> {
                 metadata_kind.to_u32().unwrap(),
                 &mut err,
             );
-            err.as_ref()?;
-
-            Some(val)
+            if err.as_ref().is_none() {
+                Some(val)
+            } else {
+                sys::rs2_free_error(err);
+                None
+            }
         }
     }
 
@@ -172,7 +212,12 @@ impl<'a> FrameEx<'a> for MotionFrame<'a> {
                 &mut err,
             );
 
-            err.as_ref().is_none() && supports_metadata != 0
+            if err.as_ref().is_none() {
+                supports_metadata != 0
+            } else {
+                sys::rs2_free_error(err);
+                false
+            }
         }
     }
 
@@ -183,15 +228,13 @@ impl<'a> FrameEx<'a> for MotionFrame<'a> {
     }
 }
 
-impl<'a> MotionFrame<'a> {
-    /// Returns a 3-item array representing the sensor motion recorded in the Motion frame.
+impl<'a> AccelFrame<'a> {
+    /// Returns a 3-item array representing the sensor motion recorded in the Accel frame.
+    ///
+    /// Accelerations are reported as [x, y, z] values, and are in units of m/s^2
     ///
     /// This function will return different data conventions entirely depending on the device
     /// used to create the measurement.
-    ///
-    /// Gyroscope measurements are reported in radians.
-    ///
-    /// Accelerometer readings are reported in m/s^2.
     ///
     /// # Intel RealSense D435i
     ///
@@ -208,7 +251,46 @@ impl<'a> MotionFrame<'a> {
     /// Read more about the coordinate frames of RealSense motion in
     /// [the RealSense docs](https://www.intelrealsense.com/how-to-getting-imu-data-from-d435i-and-t265/)
     ///
-    pub fn motion(&self) -> &[f32; 3] {
+    pub fn acceleration(&'a self) -> &'a [f32; 3] {
         &self.motion
+    }
+}
+
+impl<'a> GyroFrame<'a> {
+    /// Returns a 3-item array representing the sensor motion recorded in the Gyro frame.
+    ///
+    /// Gyroscope measurements are reported as [x, y, z] values, and are in units of radians/s
+    ///
+    /// This function will return different data conventions entirely depending on the device
+    /// used to create the measurement.
+    ///
+    /// # Intel RealSense D435i
+    ///
+    /// - `motion[0]`: Positive x-axis points to the right.
+    /// - `motion[1]`: Positive y-axis points down.
+    /// - `motion[2]`: Positive z-axis points forward.
+    ///
+    /// # Intel RealSense T265
+    ///
+    /// - `motion[0]`: Positive X direction is towards right imager.
+    /// - `motion[1]`: Positive Y direction is upwards toward the top of the device.
+    /// - `motion[2]`: Positive Z direction is inwards toward the back of the device.
+    ///
+    /// Read more about the coordinate frames of RealSense motion in
+    /// [the RealSense docs](https://www.intelrealsense.com/how-to-getting-imu-data-from-d435i-and-t265/)
+    ///
+    pub fn rotational_velocity(&'a self) -> &'a [f32; 3] {
+        &self.motion
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn frame_has_correct_kind() {
+        assert_eq!(AccelFrame::kind(), Rs2StreamKind::Accel);
+        assert_eq!(GyroFrame::kind(), Rs2StreamKind::Gyro);
     }
 }

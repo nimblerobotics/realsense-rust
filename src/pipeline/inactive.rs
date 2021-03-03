@@ -130,10 +130,11 @@ impl<'a> InactivePipeline<'a> {
                 &mut err,
             );
 
-            if err.as_ref().is_some() {
-                None
-            } else {
+            if err.as_ref().is_none() {
                 PipelineProfile::try_from(NonNull::new(profile_ptr).unwrap()).ok()
+            } else {
+                sys::rs2_free_error(err);
+                None
             }
         }
     }
@@ -155,7 +156,13 @@ impl<'a> InactivePipeline<'a> {
                 self.pipeline_ptr.as_ptr(),
                 &mut err,
             );
-            err.as_ref().is_none() && can_resolve != 0
+
+            if err.as_ref().is_none() {
+                can_resolve != 0
+            } else {
+                sys::rs2_free_error(err);
+                false
+            }
         }
     }
 }

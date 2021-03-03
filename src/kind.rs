@@ -16,7 +16,7 @@
 //!
 //! ```rust
 //! use num_traits::ToPrimitive;
-//! use crate::kind::Rs2Extension;
+//! use realsense_rust::kind::Rs2Extension;
 //!
 //! let ext = Rs2Extension::ColorSensor;
 //! println!("The extension is: {}", ext.to_u32().unwrap());
@@ -43,7 +43,7 @@
 //! ```rust
 //! use num_traits::FromPrimitive;
 //! use realsense_sys as sys;
-//! use crate::kind::Rs2CameraInfo;
+//! use realsense_rust::kind::Rs2CameraInfo;
 //!
 //! for i in 0..sys::rs2_camera_info_RS2_CAMERA_INFO_COUNT {
 //!     println!(
@@ -64,7 +64,6 @@ mod frame_metadata;
 mod hole_filling;
 mod option;
 mod persistence_control;
-mod prelude;
 mod product_line;
 mod stream_kind;
 mod timestamp_domain;
@@ -81,7 +80,6 @@ pub use frame_metadata::Rs2FrameMetadata;
 pub use hole_filling::HoleFillingMode;
 pub use option::{OptionSetError, Rs2Option, Rs2OptionRange};
 pub use persistence_control::PersistenceControl;
-pub use prelude::*;
 pub use product_line::Rs2ProductLine;
 pub use stream_kind::Rs2StreamKind;
 pub use timestamp_domain::Rs2TimestampDomain;

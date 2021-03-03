@@ -62,3 +62,20 @@ impl Display for Rs2Exception {
         write!(f, "{}", s)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use num_traits::FromPrimitive;
+
+    #[test]
+    fn all_variants_exist() {
+        for i in 0..sys::rs2_exception_type_RS2_EXCEPTION_TYPE_COUNT {
+            assert!(
+                Rs2Exception::from_u32(i).is_some(),
+                "Rs2Exception variant for ordinal {} does not exist.",
+                i,
+            );
+        }
+    }
+}

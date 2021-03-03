@@ -138,3 +138,20 @@ pub enum Rs2FrameMetadata {
     //
     // Count = sys::rs2_frame_metadata_value_RS2_FRAME_METADATA_COUNT,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use num_traits::FromPrimitive;
+
+    #[test]
+    fn all_variants_exist() {
+        for i in 0..sys::rs2_frame_metadata_value_RS2_FRAME_METADATA_COUNT {
+            assert!(
+                Rs2FrameMetadata::from_u32(i).is_some(),
+                "Rs2FrameMetadata variant for ordinal {} does not exist.",
+                i,
+            );
+        }
+    }
+}

@@ -259,6 +259,18 @@ pub enum Rs2Option {
     NoiseEstimation = sys::rs2_option_RS2_OPTION_NOISE_ESTIMATION,
     /// Enable/disable data collection for calculating IR pixel reflectivity.
     EnableIRReflectivity = sys::rs2_option_RS2_OPTION_ENABLE_IR_REFLECTIVITY,
+    /// Auto exposure limit in microseconds.
+    ///
+    /// Default is 0 which means full exposure range. If the requested exposure limit is greater
+    /// than frame time, it will be set to frame time at runtime. Setting will not take effect
+    /// until next streaming session.
+    AutoExposureLimit = sys::rs2_option_RS2_OPTION_AUTO_EXPOSURE_LIMIT,
+    /// Auto gain limits ranging from 16 to 248.
+    ///
+    /// Default is 0 which means full gain. If the requested gain limit is less than 16, it will be
+    /// set to 16. If the requested gain limit is greater than 248, it will be set to 248. Setting
+    /// will not take effect until next streaming session.
+    AutoGainLimit = sys::rs2_option_RS2_OPTION_AUTO_GAIN_LIMIT,
     // Not included since this just tells us the total number of options.
     //
     // Count = sys::rs2_option_RS2_OPTION_COUNT,
@@ -296,4 +308,32 @@ pub struct Rs2OptionRange {
     pub step: f32,
     /// The default value of the option
     pub default: f32,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use num_traits::FromPrimitive;
+
+    #[test]
+    fn all_variants_exist() {
+        const DEPRECATED_OPTIONS: [u32; 4] = [
+            sys::rs2_option_RS2_OPTION_ZERO_ORDER_POINT_X,
+            sys::rs2_option_RS2_OPTION_ZERO_ORDER_POINT_Y,
+            sys::rs2_option_RS2_OPTION_ZERO_ORDER_ENABLED,
+            sys::rs2_option_RS2_OPTION_AMBIENT_LIGHT,
+        ];
+
+        for i in 0..sys::rs2_option_RS2_OPTION_COUNT {
+            if DEPRECATED_OPTIONS.iter().any(|x| x == &i) {
+                continue;
+            }
+
+            assert!(
+                Rs2Option::from_u32(i).is_some(),
+                "Rs2Option variant for ordinal {} does not exist.",
+                i,
+            );
+        }
+    }
 }

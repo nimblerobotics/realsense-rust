@@ -16,34 +16,33 @@
 //! You can start by using [`InactivePipeline`](crate::pipeline::InactivePipeline). This is the
 //! minimal example to capture color and depth images.
 //!
-//! ```rust
+//! ```no_run
 //! use anyhow::Result;
 //! use realsense_rust::{
+//!     context::Context,
 //!     config::Config,
+//!     frame::{DepthFrame, ColorFrame},
 //!     kind::{Rs2Format, Rs2StreamKind},
-//!     pipeline::{
-//!         InactivePipeline,
-//!         ActivePipeline
-//!     },
+//!     pipeline::InactivePipeline,
 //! };
 //! use std::convert::TryFrom;
 //!
 //! fn main() -> Result<()> {
 //!     let context = Context::new()?;
-//!     let pipeline = InactivePipeline::try_from(context)?;
+//!     let pipeline = InactivePipeline::try_from(&context)?;
 //!
-//!     let config = Config::new()?;
+//!     let mut config = Config::new();
 //!     config
-//!         .enable_stream(Rs2StreamKind::Depth, 0, 640, 0, Rs2Format::Z16, 30)?
-//!         .enable_stream(Rs2StreamKind::Color, 0, 640, 0, Rs2Format::Rgb8, 30)?;
+//!         .enable_stream(Rs2StreamKind::Depth, Some(0), 640, 0, Rs2Format::Z16, 30)?
+//!         .enable_stream(Rs2StreamKind::Color, Some(0), 640, 0, Rs2Format::Rgb8, 30)?;
 //!
-//!     let mut pipeline = pipeline.start(&config)?;
+//!     let mut pipeline = pipeline.start(Some(&config))?;
 //!
 //!     let frames = pipeline.wait(None)?;
-//!     let video_frames = frames.frames_of_extension::<VideoFrame>();
-//!     let depth_frames = frames.frames_of_extension::<DepthFrame>();
+//!     let color_frames = frames.frames_of_type::<ColorFrame>();
+//!     let depth_frames = frames.frames_of_type::<DepthFrame>();
 //!
-//!     for f in video_frames {
+//!     for f in color_frames {
 //!         // process video / color frames
 //!     }
 //!
@@ -209,6 +208,8 @@
 //! error types are of the form:
 //!
 //! ```no_run
+//! use realsense_rust::kind::Rs2Exception;
+//!
 //! pub enum SomeError { CouldNotXXX(Rs2Exception, String), }
 //! ```
 //!
@@ -239,8 +240,7 @@ pub mod stream_profile;
 
 /// The module collects common used traits from this crate.
 pub mod prelude {
-    pub use crate::frame::FrameEx;
-    pub use crate::kind::Extension;
+    pub use crate::frame::{FrameCategory, FrameEx};
 }
 
 // pub use frame_queue::FrameQueue;

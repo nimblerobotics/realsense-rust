@@ -54,6 +54,7 @@ pub enum PixelKind<'a> {
 ///
 /// This method should only be called from the ImageFrame types themselves, as this
 /// is the only place where proper pointer management happens.
+#[inline]
 pub(crate) unsafe fn get_pixel(
     format: Rs2Format,
     data_size_in_bytes: usize,

@@ -36,3 +36,20 @@ pub enum Rs2StreamKind {
     //
     // Count = sys::rs2_stream_RS2_STREAM_COUNT,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use num_traits::FromPrimitive;
+
+    #[test]
+    fn all_variants_exist() {
+        for i in 0..sys::rs2_stream_RS2_STREAM_COUNT {
+            assert!(
+                Rs2StreamKind::from_u32(i).is_some(),
+                "Rs2StreamKind variant for ordinal {} does not exist.",
+                i,
+            );
+        }
+    }
+}

@@ -100,6 +100,7 @@ impl Context {
                 sys::rs2_query_devices_ex(self.context_ptr.as_ptr(), mask, &mut err);
 
             if err.as_ref().is_some() {
+                sys::rs2_free_error(err);
                 return devices;
             }
 
@@ -108,6 +109,7 @@ impl Context {
             let len = sys::rs2_get_device_count(device_list.as_ptr(), &mut err);
 
             if err.as_ref().is_some() {
+                sys::rs2_free_error(err);
                 sys::rs2_delete_device_list(device_list.as_ptr());
                 return devices;
             }

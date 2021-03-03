@@ -1,17 +1,22 @@
 [package]
 authors = ["jerry73204 <jerry73204@gmail.com>", "Jeremy Steward <jeremy.steward@tangramvision.com>", "Brandon Minor <brandon@tangramvision.com>"]
+categories = ["external-ffi-bindings", "computer-vision", "hardware-support"]
 description = "High-level RealSense library in Rust"
-documentation = "https://docs.rs/realsense-rust/"
 edition = "2018"
-homepage = "https://github.com/jerry73204/realsense-rust"
+homepage = "https://gitlab.com/tangram-vision-oss/realsense-rust"
+keywords = ["Intel", "RealSense", "Sensor", "Robotics"]
 license = "Apache-2.0"
 name = "realsense-rust"
-repository = "https://github.com/jerry73204/realsense-rust"
+readme = "README.md"
+repository = "https://gitlab.com/tangram-vision-oss/realsense-rust"
 version = "0.5.0"
 
 [features]
 default = []
 buildtime-bindgen = ["realsense-sys/buildtime-bindgen"]
+# This feature does nothing in terms of library functionality / behaviour, but
+# is instead for running tests that utilize a single device on the backend.
+test-single-device = []
 with-nalgebra = ["nalgebra"]
 
 [dependencies]

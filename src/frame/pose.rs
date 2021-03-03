@@ -4,11 +4,11 @@
 //! at a point in time. See the member and function declarations for how these values are stored
 //! and retrieved.
 
-use super::prelude::{CouldNotGetFrameSensorError, FrameConstructionError, FrameEx};
+use super::prelude::{CouldNotGetFrameSensorError, FrameCategory, FrameConstructionError, FrameEx};
 use crate::{
     check_rs2_error,
     common::*,
-    kind::{Extension, Rs2Extension, Rs2FrameMetadata, Rs2TimestampDomain},
+    kind::{Rs2Extension, Rs2FrameMetadata, Rs2TimestampDomain},
     sensor::Sensor,
     stream_profile::StreamProfile,
 };
@@ -119,9 +119,17 @@ impl<'a> Drop for PoseFrame<'a> {
 
 unsafe impl<'a> Send for PoseFrame<'a> {}
 
-impl<'a> Extension for PoseFrame<'a> {
+impl<'a> FrameCategory for PoseFrame<'a> {
     fn extension() -> Rs2Extension {
         Rs2Extension::PoseFrame
+    }
+
+    fn kind() -> Rs2StreamKind {
+        Rs2StreamKind::Pose
+    }
+
+    fn has_correct_kind(&self) -> bool {
+        self.frame_stream_profile.kind() == Self::kind()
     }
 }
 
@@ -179,7 +187,7 @@ impl<'a> TryFrom<NonNull<sys::rs2_frame>> for PoseFrame<'a> {
 }
 
 impl<'a> FrameEx<'a> for PoseFrame<'a> {
-    fn profile(&'a self) -> &'a StreamProfile<'a> {
+    fn stream_profile(&'a self) -> &'a StreamProfile<'a> {
         &self.frame_stream_profile
     }
 
@@ -214,9 +222,13 @@ impl<'a> FrameEx<'a> for PoseFrame<'a> {
                 metadata_kind.to_u32().unwrap(),
                 &mut err,
             );
-            err.as_ref()?;
 
-            Some(val)
+            if err.as_ref().is_none() {
+                Some(val)
+            } else {
+                sys::rs2_free_error(err);
+                None
+            }
         }
     }
 
@@ -230,7 +242,12 @@ impl<'a> FrameEx<'a> for PoseFrame<'a> {
                 &mut err,
             );
 
-            err.as_ref().is_none() && supports_metadata != 0
+            if err.as_ref().is_none() {
+                supports_metadata != 0
+            } else {
+                sys::rs2_free_error(err);
+                false
+            }
         }
     }
 
@@ -238,5 +255,15 @@ impl<'a> FrameEx<'a> for PoseFrame<'a> {
         self.should_drop = false;
 
         self.frame_ptr
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn frame_has_correct_kind() {
+        assert_eq!(PoseFrame::kind(), Rs2StreamKind::Pose);
     }
 }

@@ -155,7 +155,12 @@ impl Sensor {
                     &mut err,
                 );
 
-                err.as_ref().is_none() && is_extendable != 0
+                if err.as_ref().is_none() {
+                    is_extendable != 0
+                } else {
+                    sys::rs2_free_error(err);
+                    false
+                }
             })
             .unwrap();
         *ext
@@ -182,6 +187,7 @@ impl Sensor {
             if err.as_ref().is_none() {
                 Some(val)
             } else {
+                sys::rs2_free_error(err);
                 None
             }
         }
@@ -260,6 +266,7 @@ impl Sensor {
                     default: default.assume_init(),
                 })
             } else {
+                sys::rs2_free_error(err);
                 None
             }
         }
@@ -281,6 +288,7 @@ impl Sensor {
             if err.as_ref().is_none() {
                 val != 0
             } else {
+                sys::rs2_free_error(err);
                 false
             }
         }
@@ -306,6 +314,7 @@ impl Sensor {
             if err.as_ref().is_none() {
                 val != 0
             } else {
+                sys::rs2_free_error(err);
                 false
             }
         }
@@ -322,6 +331,7 @@ impl Sensor {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
             let profiles_ptr = sys::rs2_get_stream_profiles(self.sensor_ptr.as_ptr(), &mut err);
             if err.as_ref().is_some() {
+                sys::rs2_free_error(err);
                 return profiles;
             }
 
@@ -331,6 +341,7 @@ impl Sensor {
             let len = sys::rs2_get_stream_profiles_count(nonnull_profiles_ptr.as_ptr(), &mut err);
 
             if err.as_ref().is_some() {
+                sys::rs2_free_error(err);
                 sys::rs2_delete_stream_profiles_list(nonnull_profiles_ptr.as_ptr());
                 return profiles;
             }
@@ -371,10 +382,11 @@ impl Sensor {
                 &mut err,
             );
 
-            if err.as_ref().is_some() {
-                None
-            } else {
+            if err.as_ref().is_none() {
                 Some(CStr::from_ptr(val))
+            } else {
+                sys::rs2_free_error(err);
+                None
             }
         }
     }
@@ -392,7 +404,12 @@ impl Sensor {
                 &mut err,
             );
 
-            err.as_ref().is_none() && supports_info != 0
+            if err.as_ref().is_none() {
+                supports_info != 0
+            } else {
+                sys::rs2_free_error(err);
+                false
+            }
         }
     }
 }

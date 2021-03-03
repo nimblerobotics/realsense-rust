@@ -77,7 +77,12 @@ impl DeviceHub {
                 &mut err,
             );
 
-            err.as_ref().is_none() && val != 0
+            if err.as_ref().is_none() {
+                val != 0
+            } else {
+                sys::rs2_free_error(err);
+                false
+            }
         }
     }
 }

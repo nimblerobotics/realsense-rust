@@ -43,3 +43,20 @@ impl ToString for Rs2TimestampDomain {
         self.as_str().to_owned()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use num_traits::FromPrimitive;
+
+    #[test]
+    fn all_variants_exist() {
+        for i in 0..sys::rs2_timestamp_domain_RS2_TIMESTAMP_DOMAIN_COUNT {
+            assert!(
+                Rs2TimestampDomain::from_u32(i).is_some(),
+                "Rs2TimestampDomain variant for ordinal {} does not exist.",
+                i,
+            );
+        }
+    }
+}

@@ -31,6 +31,9 @@ use realsense_sys as sys;
 /// * [`Rs2Extension::PoseSensor`]
 /// * [`Rs2Extension::L500DepthSensor`]
 /// * [`Rs2Extension::Tm2Sensor`]
+/// * [`Rs2Extension::CalibratedSensor`]
+/// * [`Rs2Extension::MaxUsableRangeSensor`]
+/// * [`Rs2Extension::DebugStreamSensor`]
 ///
 /// # Frame extensions:
 ///
@@ -52,6 +55,8 @@ use realsense_sys as sys;
 /// * [`Rs2Extension::HoleFillingFilter`]
 /// * [`Rs2Extension::ZeroOrderFilter`]
 /// * [`Rs2Extension::RecommendedFilters`]
+/// * [`Rs2Extension::AutoCalibrationFilter`]
+/// * [`Rs2Extension::SequenceIdFilter`]
 ///
 /// # Profile extensions:
 ///
@@ -96,6 +101,9 @@ pub enum Rs2Extension {
     PoseSensor = sys::rs2_extension_RS2_EXTENSION_POSE_SENSOR,
     L500DepthSensor = sys::rs2_extension_RS2_EXTENSION_L500_DEPTH_SENSOR,
     Tm2Sensor = sys::rs2_extension_RS2_EXTENSION_TM2_SENSOR,
+    CalibratedSensor = sys::rs2_extension_RS2_EXTENSION_CALIBRATED_SENSOR,
+    MaxUsableRangeSensor = sys::rs2_extension_RS2_EXTENSION_MAX_USABLE_RANGE_SENSOR,
+    DebugStreamSensor = sys::rs2_extension_RS2_EXTENSION_DEBUG_STREAM_SENSOR,
     // frame
     VideoFrame = sys::rs2_extension_RS2_EXTENSION_VIDEO_FRAME,
     MotionFrame = sys::rs2_extension_RS2_EXTENSION_MOTION_FRAME,
@@ -113,6 +121,8 @@ pub enum Rs2Extension {
     HoleFillingFilter = sys::rs2_extension_RS2_EXTENSION_HOLE_FILLING_FILTER,
     ZeroOrderFilter = sys::rs2_extension_RS2_EXTENSION_ZERO_ORDER_FILTER,
     RecommendedFilters = sys::rs2_extension_RS2_EXTENSION_RECOMMENDED_FILTERS,
+    AutoCalibrationFilter = sys::rs2_extension_RS2_EXTENSION_AUTO_CALIBRATION_FILTER,
+    SequenceIdFilter = sys::rs2_extension_RS2_EXTENSION_SEQUENCE_ID_FILTER,
     // profile
     VideoProfile = sys::rs2_extension_RS2_EXTENSION_VIDEO_PROFILE,
     MotionProfile = sys::rs2_extension_RS2_EXTENSION_MOTION_PROFILE,
@@ -137,12 +147,17 @@ pub enum Rs2Extension {
     Options = sys::rs2_extension_RS2_EXTENSION_OPTIONS,
     Video = sys::rs2_extension_RS2_EXTENSION_VIDEO,
     Roi = sys::rs2_extension_RS2_EXTENSION_ROI,
+    DepthHuffmanDecoder = sys::rs2_extension_RS2_EXTENSION_DEPTH_HUFFMAN_DECODER,
+    Serializable = sys::rs2_extension_RS2_EXTENSION_SERIALIZABLE,
+    FirmwareLogger = sys::rs2_extension_RS2_EXTENSION_FW_LOGGER,
+    DeviceCalibration = sys::rs2_extension_RS2_EXTENSION_DEVICE_CALIBRATION,
+    HdrMerge = sys::rs2_extension_RS2_EXTENSION_HDR_MERGE,
     // Not included since this just tells us the total number of extensions
     //
     // Count = sys::rs2_extension_RS2_EXTENSION_COUNT,
 }
 
-pub const SENSOR_EXTENSIONS: [Rs2Extension; 9] = [
+pub const SENSOR_EXTENSIONS: [Rs2Extension; 12] = [
     Rs2Extension::ColorSensor,
     Rs2Extension::MotionSensor,
     Rs2Extension::FishEyeSensor,
@@ -152,6 +167,9 @@ pub const SENSOR_EXTENSIONS: [Rs2Extension; 9] = [
     Rs2Extension::PoseSensor,
     Rs2Extension::L500DepthSensor,
     Rs2Extension::Tm2Sensor,
+    Rs2Extension::CalibratedSensor,
+    Rs2Extension::MaxUsableRangeSensor,
+    Rs2Extension::DebugStreamSensor,
 ];
 
 pub const FRAME_EXTENSIONS: [Rs2Extension; 7] = [
@@ -164,7 +182,7 @@ pub const FRAME_EXTENSIONS: [Rs2Extension; 7] = [
     Rs2Extension::Points,
 ];
 
-pub const FILTER_EXTENSIONS: [Rs2Extension; 8] = [
+pub const FILTER_EXTENSIONS: [Rs2Extension; 9] = [
     Rs2Extension::DecimationFilter,
     Rs2Extension::ThresholdFilter,
     Rs2Extension::DisparityFilter,
@@ -173,6 +191,7 @@ pub const FILTER_EXTENSIONS: [Rs2Extension; 8] = [
     Rs2Extension::HoleFillingFilter,
     Rs2Extension::ZeroOrderFilter,
     Rs2Extension::RecommendedFilters,
+    Rs2Extension::AutoCalibrationFilter,
 ];
 
 pub const PROFILE_EXTENSIONS: [Rs2Extension; 3] = [
@@ -204,3 +223,20 @@ pub const MISC_EXTENSIONS: [Rs2Extension; 15] = [
     Rs2Extension::Video,
     Rs2Extension::Roi,
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use num_traits::FromPrimitive;
+
+    #[test]
+    fn all_variants_exist() {
+        for i in 0..sys::rs2_extension_RS2_EXTENSION_COUNT {
+            assert!(
+                Rs2Extension::from_u32(i).is_some(),
+                "Rs2Extension variant for ordinal {} does not exist.",
+                i,
+            );
+        }
+    }
+}

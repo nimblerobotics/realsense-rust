@@ -92,6 +92,9 @@ impl Config {
     /// [`Rs2Format::Any`](crate::kind::Rs2Format::Any) and librealsense2 will determine what the
     /// most appropriate format is for a given stream.
     ///
+    /// The index is can be optionally provided. If it is not provided, then librealsense2 will
+    /// pick the most suitable stream index it can find.
+    ///
     /// If either `width` or `height` (but not both) are zero, librealsense2 will find the most
     /// appropriate value to match the non-zero one. E.g. if `width` is 640 and `height` is 0, then
     /// librealsense2 will return 640x480 images (the closest appropriate format).
@@ -107,12 +110,13 @@ impl Config {
     pub fn enable_stream(
         &mut self,
         stream: Rs2StreamKind,
-        index: usize,
+        index: Option<usize>,
         width: usize,
         height: usize,
         format: Rs2Format,
         framerate: usize,
     ) -> Result<&mut Self, ConfigurationError> {
+        let index: i32 = if let Some(i) = index { i as i32 } else { -1 };
         unsafe {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
             sys::rs2_config_enable_stream(

@@ -123,13 +123,13 @@ impl<'a> ActivePipeline<'a> {
             );
             check_rs2_error!(err, FrameWaitError::DidErrorDuringFrameWait)?;
 
-            if did_get_frame == 0 {
-                return Err(anyhow::anyhow!(
+            if did_get_frame != 0 {
+                Ok(CompositeFrame::from(NonNull::new(frame).unwrap()))
+            } else {
+                Err(anyhow::anyhow!(
                     FrameWaitError::DidTimeoutBeforeFrameArrival
-                ));
+                ))
             }
-
-            Ok(CompositeFrame::from(NonNull::new(frame).unwrap()))
         }
     }
 
@@ -141,16 +141,17 @@ impl<'a> ActivePipeline<'a> {
         unsafe {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
             let mut frame_ptr = std::ptr::null_mut::<sys::rs2_frame>();
-            let was_stored = sys::rs2_pipeline_poll_for_frames(
+            let _ = sys::rs2_pipeline_poll_for_frames(
                 self.pipeline_ptr.as_ptr(),
                 &mut frame_ptr,
                 &mut err,
             );
 
-            if err.as_ref().is_some() || was_stored == 0 {
-                None
+            if err.as_ref().is_none() {
+                Some(CompositeFrame::from(NonNull::new(frame_ptr)?))
             } else {
-                Some(CompositeFrame::from(NonNull::new(frame_ptr).unwrap()))
+                sys::rs2_free_error(err);
+                None
             }
         }
     }

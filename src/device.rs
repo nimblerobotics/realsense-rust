@@ -99,6 +99,7 @@ impl Device {
             let sensor_list_ptr = sys::rs2_query_sensors(self.device_ptr.as_ptr(), &mut err);
 
             if err.as_ref().is_some() {
+                sys::rs2_free_error(err);
                 return sensors;
             }
 
@@ -107,6 +108,7 @@ impl Device {
             let len = sys::rs2_get_sensors_count(nonnull_sensor_list.as_ptr(), &mut err);
 
             if err.as_ref().is_some() {
+                sys::rs2_free_error(err);
                 sys::rs2_delete_sensor_list(nonnull_sensor_list.as_ptr());
                 return sensors;
             }
@@ -166,10 +168,11 @@ impl Device {
                 &mut err,
             );
 
-            if err.as_ref().is_some() {
-                None
-            } else {
+            if err.as_ref().is_none() {
                 Some(CStr::from_ptr(val))
+            } else {
+                sys::rs2_free_error(err);
+                None
             }
         }
     }
@@ -187,7 +190,12 @@ impl Device {
                 &mut err,
             );
 
-            err.as_ref().is_none() && supports_info != 0
+            if err.as_ref().is_none() {
+                supports_info != 0
+            } else {
+                sys::rs2_free_error(err);
+                false
+            }
         }
     }
 
