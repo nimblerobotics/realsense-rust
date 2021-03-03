@@ -1,14 +1,17 @@
 # CONFIGURATION
-image: 'registry.gitlab.com/tangram-vision-oss/realsense-rust/ci:latest'
+default:
+  image: 'registry.gitlab.com/tangram-vision-oss/realsense-rust/ci:latest'
+  before_script:
+    # Update rust in case the latest version isn't built into our docker image.
+    # For info about RUSTUP_PERMIT_COPY_RENAME, see
+    # https://github.com/rust-lang/rustup/issues/2542
+    - RUSTUP_PERMIT_COPY_RENAME=1 rustup update
+
 
 stages:
   - test
   - doc
   - build_artifacts
-
-before_script:
-  # Update rust in case the latest version isn't built into our docker image.
-  - rustup update
 
 ##### ########## ########## ########## ########## #####
 # TEST STAGE
