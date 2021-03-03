@@ -49,23 +49,39 @@ fn can_resolve_color_and_depth_and_infrared_on_d400_series() {
         let serial = device.info(Rs2CameraInfo::SerialNumber).unwrap();
         let mut config = Config::new();
 
-        config
-            .enable_device_from_serial(serial)
-            .unwrap()
-            .disable_all_streams()
-            .unwrap()
-            .enable_stream(Rs2StreamKind::Color, Some(0), 0, 0, Rs2Format::Rgba8, 30)
-            .unwrap()
-            .enable_stream(Rs2StreamKind::Depth, Some(0), 0, 0, Rs2Format::Z16, 30)
-            .unwrap()
-            // RealSense doesn't seem to like index zero for the IR cameras
-            //
-            // Really not sure why? This seems like an implementation issue, but in practice most
-            // won't be after the IR image directly (I think?).
-            .enable_stream(Rs2StreamKind::Infrared, Some(1), 0, 0, Rs2Format::Y8, 30)
-            .unwrap()
-            .enable_stream(Rs2StreamKind::Infrared, Some(2), 0, 0, Rs2Format::Any, 30)
-            .unwrap();
+        let usb_cstr = device.info(Rs2CameraInfo::UsbTypeDescriptor).unwrap();
+        let usb_val: f32 = usb_cstr.to_str().unwrap().parse().unwrap();
+        if usb_val >= 3.0 {
+            config
+                .enable_device_from_serial(serial)
+                .unwrap()
+                .disable_all_streams()
+                .unwrap()
+                .enable_stream(Rs2StreamKind::Color, Some(0), 0, 0, Rs2Format::Rgba8, 30)
+                .unwrap()
+                .enable_stream(Rs2StreamKind::Depth, Some(0), 0, 0, Rs2Format::Z16, 30)
+                .unwrap()
+                // RealSense doesn't seem to like index zero for the IR cameras
+                //
+                // Really not sure why? This seems like an implementation issue, but in practice most
+                // won't be after the IR image directly (I think?).
+                .enable_stream(Rs2StreamKind::Infrared, Some(1), 0, 0, Rs2Format::Y8, 30)
+                .unwrap()
+                .enable_stream(Rs2StreamKind::Infrared, Some(2), 0, 0, Rs2Format::Any, 30)
+                .unwrap();
+        } else {
+            config
+                .enable_device_from_serial(serial)
+                .unwrap()
+                .disable_all_streams()
+                .unwrap()
+                .enable_stream(Rs2StreamKind::Color, Some(0), 0, 0, Rs2Format::Rgba8, 30)
+                .unwrap()
+                .enable_stream(Rs2StreamKind::Depth, Some(0), 0, 0, Rs2Format::Z16, 30)
+                .unwrap()
+                .enable_stream(Rs2StreamKind::Infrared, Some(1), 0, 0, Rs2Format::Y8, 30)
+                .unwrap();
+        }
 
         let pipeline = InactivePipeline::try_from(&context).unwrap();
 
@@ -216,24 +232,38 @@ fn l500_streams_at_expected_framerate() {
         let serial = device.info(Rs2CameraInfo::SerialNumber).unwrap();
         let mut config = Config::new();
 
+        let usb_cstr = device.info(Rs2CameraInfo::UsbTypeDescriptor).unwrap();
+        let usb_val: f32 = usb_cstr.to_str().unwrap().parse().unwrap();
         let framerate = 30;
-
-        config
-            .enable_device_from_serial(serial)
-            .unwrap()
-            .disable_all_streams()
-            .unwrap()
-            .enable_stream(Rs2StreamKind::Depth, None, 0, 0, Rs2Format::Z16, framerate)
-            .unwrap()
-            .enable_stream(
-                Rs2StreamKind::Infrared,
-                None,
-                0,
-                0,
-                Rs2Format::Y8,
-                framerate,
-            )
-            .unwrap();
+        let stream_count: usize;
+        if usb_val >= 3.0 {
+            stream_count = 2;
+            config
+                .enable_device_from_serial(serial)
+                .unwrap()
+                .disable_all_streams()
+                .unwrap()
+                .enable_stream(Rs2StreamKind::Depth, None, 0, 0, Rs2Format::Z16, framerate)
+                .unwrap()
+                .enable_stream(
+                    Rs2StreamKind::Infrared,
+                    None,
+                    0,
+                    0,
+                    Rs2Format::Y8,
+                    framerate,
+                )
+                .unwrap();
+        } else {
+            stream_count = 1;
+            config
+                .enable_device_from_serial(serial)
+                .unwrap()
+                .disable_all_streams()
+                .unwrap()
+                .enable_stream(Rs2StreamKind::Depth, None, 0, 0, Rs2Format::Z16, framerate)
+                .unwrap();
+        }
 
         let pipeline = InactivePipeline::try_from(&context).unwrap();
 
@@ -278,7 +308,7 @@ fn l500_streams_at_expected_framerate() {
             absdiff_from_expected
         );
 
-        assert_eq!(nframes, framerate * number_of_seconds * 2);
+        assert_eq!(nframes, framerate * number_of_seconds * stream_count);
     }
 }
 
@@ -295,30 +325,46 @@ fn d400_streams_are_distinct() {
         let serial = device.info(Rs2CameraInfo::SerialNumber).unwrap();
         let mut config = Config::new();
 
-        // Gyro / accel streams not included here because they have a different framerate
-        config
-            .enable_device_from_serial(serial)
-            .unwrap()
-            .disable_all_streams()
-            .unwrap()
-            .enable_stream(Rs2StreamKind::Color, None, 0, 0, Rs2Format::Rgba8, 30)
-            .unwrap()
-            .enable_stream(Rs2StreamKind::Depth, None, 0, 0, Rs2Format::Z16, 30)
-            .unwrap()
-            .enable_stream(Rs2StreamKind::Infrared, Some(1), 0, 0, Rs2Format::Y8, 30)
-            .unwrap()
-            .enable_stream(Rs2StreamKind::Infrared, Some(2), 0, 0, Rs2Format::Any, 30)
-            .unwrap();
+        let usb_cstr = device.info(Rs2CameraInfo::UsbTypeDescriptor).unwrap();
+        let usb_val: f32 = usb_cstr.to_str().unwrap().parse().unwrap();
+        if usb_val >= 3.0 {
+            // Gyro / accel streams not included here because they have a different framerate
+            config
+                .enable_device_from_serial(serial)
+                .unwrap()
+                .disable_all_streams()
+                .unwrap()
+                .enable_stream(Rs2StreamKind::Color, None, 0, 0, Rs2Format::Rgba8, 30)
+                .unwrap()
+                .enable_stream(Rs2StreamKind::Depth, None, 0, 0, Rs2Format::Z16, 30)
+                .unwrap()
+                .enable_stream(Rs2StreamKind::Infrared, Some(1), 0, 0, Rs2Format::Y8, 30)
+                .unwrap()
+                .enable_stream(Rs2StreamKind::Infrared, Some(2), 0, 0, Rs2Format::Any, 30)
+                .unwrap();
+        } else {
+            config
+                .enable_device_from_serial(serial)
+                .unwrap()
+                .disable_all_streams()
+                .unwrap()
+                .enable_stream(Rs2StreamKind::Color, None, 0, 0, Rs2Format::Rgba8, 30)
+                .unwrap()
+                .enable_stream(Rs2StreamKind::Depth, None, 0, 0, Rs2Format::Z16, 30)
+                .unwrap()
+                .enable_stream(Rs2StreamKind::Infrared, Some(1), 0, 0, Rs2Format::Y8, 30)
+                .unwrap();
+        }
 
         let pipeline = InactivePipeline::try_from(&context).unwrap();
         let mut pipeline = pipeline.start(Some(&config)).unwrap();
 
         let frames = pipeline.wait(None).unwrap();
 
-        assert_eq!(frames.count(), 4);
+        assert_eq!(frames.count(), 3);
         assert_eq!(frames.frames_of_type::<ColorFrame>().len(), 1);
         assert_eq!(frames.frames_of_type::<DepthFrame>().len(), 1);
-        assert_eq!(frames.frames_of_type::<InfraredFrame>().len(), 2);
+        assert_eq!(frames.frames_of_type::<InfraredFrame>().len(), 1);
     }
 }
 
@@ -334,8 +380,6 @@ fn l515_streams_are_distinct() {
     if let Some(device) = devices.get(0) {
         let serial = device.info(Rs2CameraInfo::SerialNumber).unwrap();
         let mut config = Config::new();
-
-        // Gyro / accel streams not included here because they have a different framerate
         config
             .enable_device_from_serial(serial)
             .unwrap()

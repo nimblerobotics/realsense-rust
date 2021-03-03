@@ -1,6 +1,7 @@
 # Examples
 
-To run any examples, use cargo: `$cargo run --example <demo name>`
+Look at the source code of the examples to find hepful comments and pointers about how to get the most out of this
+API. Run any of the examples here using cargo: `$cargo run --example <demo name>`
 
 ## For all devices
 

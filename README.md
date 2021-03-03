@@ -3,7 +3,7 @@
 The project provides high-level bindings (crate `realsense_rust`) to librealsense2 library as well as low-level FFI
 (crate `realsense_sys`) interface.
 
-**Current librealsense version: 2.41.0**
+**Current librealsense version: 2.42.0**
 
 This project is hosted on both [Github](https://github.com/Tangram-Vision/realsense-rust) and
 [Gitlab](https://gitlab.com/tangram-vision-oss/realsense-rust/). While we're happy to receive pull / merge requests on
@@ -18,6 +18,12 @@ to improve or have a question regarding how things work.
   device power cycle doesn't always remedy this, either. In many cases, the host USB hub itself will need a reset. Make
   sure any USB cables used are able to draw at least 2 amps. Read more on the issue
   [here](https://support.intelrealsense.com/hc/en-us/community/posts/360033595714-D435-USB-connection-issues).
+
+- **USB Bandwidth**: When a device is connected, librealsense will measure the transmission speed of data across its USB
+  connection. USB3 speeds can handle all streams running simultaneously. USB2 speeds _cannot_; trying to set a streaming
+  configuration that is too much for USB2 will result in a failed streaming config, and will cause the program to fail.
+  Luckily, this information can be looked up and compensated for during runtime. See the [device-specific demo
+  examples](examples/) for ways to achieve this.
 
 ## API Use
 
@@ -48,8 +54,8 @@ realsense-rust = { version = "0.5", features = ["buildtime-bindgen"] }
 
 ## Getting started + Examples
 
-Check out the examples folder for minimal configurations that fit your device. We have included a README.md there that
-explains the functionality that one can get from this API. For more explanation, see the crate documentation.
+Check out the examples folder for helpful snippets of code, as well as minimal configurations that fit some of the most
+popular RealSense devices. For more explanation, see the crate documentation.
 
 ## Contributing to this project
 
