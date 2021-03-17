@@ -1,6 +1,6 @@
 //! Marker traits and types for [ProcessingBlock](crate::processing_block::ProcessingBlock).
 
-use crate::{common::*, kind::Rs2Extension};
+use crate::kind::Rs2Extension;
 
 pub trait ProcessingBlockKind {}
 pub trait ExtendableProcessingBlockKind

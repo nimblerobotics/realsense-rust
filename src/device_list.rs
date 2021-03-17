@@ -1,7 +1,6 @@
 //! Defines the iterable list of devices.
 
 use crate::{
-    common::*,
     device::Device,
     error::{ErrorChecker, Result},
 };

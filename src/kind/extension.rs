@@ -13,8 +13,7 @@ use realsense_sys as sys;
 ///
 /// Here, rather than try to separate these into different types at the Rust level, we do a simple
 /// mapping to the underlying C-enum values. The API does not try to expose these where possible
-/// and attempts to hide this behind traits. See the [`Extension`](crate::kind::Extension) trait
-/// for one way in which we do this.
+/// and attempts to hide this behind traits.
 ///
 /// Extensions as listed are effectively the "types" of underlying data in the librealsense2
 /// system. However, there is only one extension enum, whereas there are plenty of categories of

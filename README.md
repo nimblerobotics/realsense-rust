@@ -10,7 +10,34 @@ This project is hosted on both [Github](https://github.com/Tangram-Vision/realse
 either platform, we focus most of our work on Gitlab, so please submit an issue there if you've found something we need
 to improve or have a question regarding how things work.
 
-## Hardware Considerations
+## Getting Started
+
+Make sure the current librealsense version above is installed on your system. Visit the [RealSense official
+repository](https://github.com/IntelRealSense/librealsense) to download and install this on the host machine.
+
+Once that's done, add this crate to your project's `Cargo.toml`.
+
+*Backwards compatibility*: If you're using an older librealsense version, you may enable `buildtime-bindgen` to
+re-generate the bindings. We make no claims of backwards compatibility; good luck.
+
+```toml
+[dependencies]
+realsense-rust = { version = "<current version>", features = ["buildtime-bindgen"] }
+```
+
+## Examples and Usage
+
+Check out the examples folder for helpful snippets of code, as well as minimal configurations that fit some of the most
+popular RealSense devices. For more explanation, see the crate documentation.
+
+### Features
+
+Use these by running `cargo run --features <name of feature>`
+
+- **buildtime-bindgen**: Generate Rust bindings during build time.
+- **device-test**: Enable tests that requires connections to RealSense devices.
+
+## Special Considerations
 
 - **USB Current Draw**: Many RealSense devices draw more current than a standard USB cable can provide. For example,
   standard USB can run 0.9 amps, while the RealSense 435i draws 2 amps. Using a USB cable that doesn't have the right
@@ -25,64 +52,27 @@ to improve or have a question regarding how things work.
   Luckily, this information can be looked up and compensated for during runtime. See the [device-specific demo
   examples](examples/) for ways to achieve this.
 
-## API Use
+- **Supported but Ignored Stream Options**: There are a few Sensor options that are registered as "supported" by the
+  sensor, but are actually just set to their default values on runtime. These options are listed and tested in
+  [check_supported_but_ignored_sensor_options](./tests/connectivity_l500.rs) device tests. Currently,
+  [Rs2Option::GlobalTimeEnabled] on the L500 is the only setting known to suffer from this. However, the test has been
+  written in a way that makes it easy to test more Options for this same behavior.
 
-Make sure librealsense 2.41.0 is installed on your system. Visit the [RealSense official
-repository](https://github.com/IntelRealSense/librealsense) to download and install this on the host machine.
+## Realsense-sys: A low-level API
 
-Once that's done, add this crate to your project's `Cargo.toml`:
+The realsense-sys crate provides C bindings generated from librealsense headers. See the realsense-sys
+[README](./realsense-sys/README.md) for more information. 
 
-```toml
-[dependencies]
-realsense-rust = "0.5"
-```
+## Design Philosophy
 
-...and you should be good to go!
+There's a lot of thought that went into making this library Rust-safe. Check out the
+[architecture](./src/docs/architecture.rs) doc for our thoughts on Rust safety, error handling, and more for this API. 
 
-**Backwards compatibility**: If you're using an older librealsense version, you may enable `buildtime-bindgen` to
-re-generate the bindings. We make no claims of backwards compatibility; good luck.
-
-```toml
-[dependencies]
-realsense-rust = { version = "0.5", features = ["buildtime-bindgen"] }
-```
-
-## Cargo Features
-
-- **with-nalgebra** (default): Enable [nalgebra](https://github.com/rustsim/nalgebra) support.
-- **buildtime-bindgen**: Generate Rust bindings during build time.
-
-## Getting started + Examples
-
-Check out the examples folder for helpful snippets of code, as well as minimal configurations that fit some of the most
-popular RealSense devices. For more explanation, see the crate documentation.
-
-## Contributing to this project
+## Contributing
 
 First, check out our [contributing guidelines](CONTRIBUTING.md). After that, make sure that you read through the
 documentation in [lib.rs](src/lib.rs) as well as any of the modules you might be interested in contributing to! If you
 find documentation missing, this is considered a bug, so please submit a bug report!
-
-### Work with realsense-sys low-level API
-
-The realsense-sys crate provides C bindings generated from librealsense headers. The reference can be found on RealSense
-official [documentation](https://github.com/IntelRealSense/librealsense/tree/master/doc).
-
-Import realsense-sys to your `Cargo.toml`.
-
-```toml
-[dependencies]
-realsense-sys = "0.3"
-```
-and you can call low level C functions.
-
-### Generate documents from source code
-
-The API changes may not be found on docs.rs. To generate document from the most recent commit,
-
-```sh
-cargo doc --open
-```
 
 ## License
 

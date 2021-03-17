@@ -8,14 +8,19 @@
 use super::prelude::{CouldNotGetFrameSensorError, FrameCategory, FrameConstructionError, FrameEx};
 use crate::{
     check_rs2_error,
-    common::*,
-    kind::{Rs2Extension, Rs2FrameMetadata, Rs2TimestampDomain},
+    kind::{Rs2Extension, Rs2FrameMetadata, Rs2StreamKind, Rs2TimestampDomain},
     sensor::Sensor,
     stream_profile::StreamProfile,
 };
 use anyhow::Result;
+use num_traits::FromPrimitive;
 use num_traits::ToPrimitive;
-use std::convert::TryFrom;
+use realsense_sys as sys;
+use std::{
+    convert::TryFrom,
+    marker::PhantomData,
+    ptr::{self, NonNull},
+};
 
 /// A unit struct defining an Accel frame.
 #[derive(Debug)]

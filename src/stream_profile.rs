@@ -38,6 +38,7 @@
 //!
 
 use crate::{
+    base::{Rs2Extrinsics, Rs2Intrinsics, Rs2MotionDeviceIntrinsics},
     check_rs2_error,
     kind::{Rs2Exception, Rs2Format, Rs2StreamKind},
 };
@@ -106,7 +107,7 @@ pub enum DataError {
 ///
 /// 1. The stream profile list via the [`stream_profiles`](crate::sensor::Sensor::stream_profiles))
 ///    method on the [`Sensor`](crate::sensor::Sensor) type.
-/// 2. The frame-specific stream profile via the [`profile`](crate::frame::FrameEx::profile).
+/// 2. The frame-specific `frame_stream_profile` member via the Frame type.
 ///
 /// Stream profiles do not outlive the parent object that you obtained them from. This is somewhat
 /// artificial because this lifetime is not enforced or even documented this way in the C bindings
@@ -121,6 +122,7 @@ pub struct StreamProfile<'a> {
     // be manually deleted using `rs2_delete_stream_profile`. Streams are owned and managed by
     // their corresponding sensor, which are owned and managed by their corresponding devices.
     // Stream profile pointers should only be manually deleted if they are created by
+
     // `rs2_clone_stream_profile`, which we do not use in the high-level API.
     ptr: NonNull<sys::rs2_stream_profile>,
     // The kind of stream (e.g. depth, video, accelerometer, gyroscope, etc.)
@@ -292,10 +294,7 @@ impl<'a> StreamProfile<'a> {
     ///
     /// Returns [`DataError::CouldNotGetExtrinsics`] if this call fails for whatever reason.
     ///
-    pub fn get_extrinsics(
-        &self,
-        to_profile: &StreamProfile,
-    ) -> Result<sys::rs2_extrinsics, DataError> {
+    pub fn extrinsics(&self, to_profile: &StreamProfile) -> Result<Rs2Extrinsics, DataError> {
         unsafe {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
             let mut extrinsics = MaybeUninit::<sys::rs2_extrinsics>::uninit();
@@ -308,7 +307,7 @@ impl<'a> StreamProfile<'a> {
             );
             check_rs2_error!(err, DataError::CouldNotGetExtrinsics)?;
 
-            Ok(extrinsics.assume_init())
+            Ok(Rs2Extrinsics(extrinsics.assume_init()))
         }
     }
 
@@ -324,14 +323,14 @@ impl<'a> StreamProfile<'a> {
     pub fn set_extrinsics(
         &self,
         to_profile: &StreamProfile,
-        extrinsics: sys::rs2_extrinsics,
+        extrinsics: Rs2Extrinsics,
     ) -> Result<(), DataError> {
         unsafe {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
             sys::rs2_register_extrinsics(
                 self.ptr.as_ptr(),
                 to_profile.ptr.as_ptr(),
-                extrinsics,
+                extrinsics.0,
                 &mut err,
             );
             check_rs2_error!(err, DataError::CouldNotSetExtrinsics)?;
@@ -352,7 +351,7 @@ impl<'a> StreamProfile<'a> {
     ///
     /// Returns [`DataError::CouldNotGetIntrinsics`] if this call fails for any other reason.
     ///
-    pub fn intrinsics(&self) -> Result<sys::rs2_intrinsics, DataError> {
+    pub fn intrinsics(&self) -> Result<Rs2Intrinsics, DataError> {
         match self.stream {
             Rs2StreamKind::Depth => (),
             Rs2StreamKind::Color => (),
@@ -373,7 +372,7 @@ impl<'a> StreamProfile<'a> {
             );
             check_rs2_error!(err, DataError::CouldNotGetIntrinsics)?;
 
-            Ok(intrinsics.assume_init())
+            Ok(Rs2Intrinsics(intrinsics.assume_init()))
         }
     }
 
@@ -391,7 +390,7 @@ impl<'a> StreamProfile<'a> {
     /// Returns [`DataError::CouldNotGetMotionIntrinsics`](DataError::CouldNotGetMotionIntrinsics)
     /// if this call fails for any other reason.
     ///
-    pub fn motion_intrinsics(&self) -> Result<sys::rs2_motion_device_intrinsic, DataError> {
+    pub fn motion_intrinsics(&self) -> Result<Rs2MotionDeviceIntrinsics, DataError> {
         match self.stream {
             Rs2StreamKind::Gyro => (),
             Rs2StreamKind::Accel => (),
@@ -406,7 +405,7 @@ impl<'a> StreamProfile<'a> {
             sys::rs2_get_motion_intrinsics(self.ptr.as_ptr(), intrinsics.as_mut_ptr(), &mut err);
             check_rs2_error!(err, DataError::CouldNotGetMotionIntrinsics)?;
 
-            Ok(intrinsics.assume_init())
+            Ok(Rs2MotionDeviceIntrinsics(intrinsics.assume_init()))
         }
     }
 }

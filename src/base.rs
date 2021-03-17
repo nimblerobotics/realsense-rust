@@ -1,6 +1,9 @@
 //! Common types and functions.
 
-use crate::common::*;
+use crate::kind::Rs2DistortionModel;
+use num_traits::FromPrimitive;
+use realsense_sys as sys;
+use std::{ffi::CString, time::Duration};
 
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_millis(sys::RS2_DEFAULT_TIMEOUT as u64);
 
@@ -38,113 +41,120 @@ where
     Ok(CString::new(buf)?)
 }
 
-/// The intrinsic parameters for motion devices.
-pub struct MotionIntrinsics(pub sys::rs2_motion_device_intrinsic);
+#[derive(Debug)]
+pub struct Rs2MotionDeviceIntrinsics(pub sys::rs2_motion_device_intrinsic);
 
-impl Deref for MotionIntrinsics {
-    type Target = sys::rs2_motion_device_intrinsic;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+/// Profile the scale, bias, and variances for a given motion device
+///
+/// The bias and scale factors are stored as one large matrix; see the documentation on `data()` for the correct way to
+/// retrieve these parameters.
+///
+/// Use the function `stream_profile.motion_intrinsics()` to retrieve these intrinsics from a certain stream.
+impl Rs2MotionDeviceIntrinsics {
+    /// A 3x4 matrix describing the scale and bias intrinsics of the motion device.
+    ///
+    /// This matrix is stored internally like so:
+    /// [ Scale X    | cross axis  | cross axis | Bias X ]
+    /// [ cross axis | Scale Y     | cross axis | Bias Y ]
+    /// [ cross axis | cross axis  | Scale Z    | Bias Z ]
+    ///
+    pub fn data(&self) -> [[f32; 4usize]; 3usize] {
+        self.0.data
+    }
+    /// Variance of noise for X, Y, and Z axis.
+    pub fn noise_variances(&self) -> [f32; 3usize] {
+        self.0.noise_variances
+    }
+    /// Variance of bias for X, Y, and Z axis.
+    pub fn bias_variances(&self) -> [f32; 3usize] {
+        self.0.bias_variances
     }
 }
 
-impl DerefMut for MotionIntrinsics {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+unsafe impl Send for Rs2MotionDeviceIntrinsics {}
+
+/// Type representing the intrinsic scale, bias, and variances for a given motion device.
+///
+/// The data in `coeffs` means different things for different models.
+///
+/// - Brown-Conrady: [k1, k2, p1, p2, k3].
+/// - F-Theta Fisheye: [k1, k2, k3, k4, 0].
+/// - Kannala-Brandt: [k1, k2, k3, k4, 0].
+///
+/// The Intel RealSense documentation claims that "Other models are subject to their own interpretations". This is
+/// admittedly not too helpful, but it's worth noting in case your model isn't covered here.
+#[derive(Debug)]
+pub struct Rs2Distortion {
+    /// Distortion model of the image.
+    pub model: Rs2DistortionModel,
+    /// Distortion coefficients.
+    pub coeffs: [f32; 5usize],
+}
+
+unsafe impl Send for Rs2Distortion {}
+
+/// Type representing the model for describing the way that light bends in a stream.
+///
+/// This stores the focal length, principal point, dimensions, and distortion model used on the image frame. See the
+/// documentation for [Rs2Distortion] for specifics on the available distortion models for RealSense devices.
+///
+/// Use the function `stream_profile.intrinsics()` to retrieve these intrinsics from a certain stream.
+#[derive(Debug)]
+pub struct Rs2Intrinsics(pub sys::rs2_intrinsics);
+
+impl Rs2Intrinsics {
+    /// Width of the image in pixels
+    pub fn width(&self) -> usize {
+        self.0.width as usize
+    }
+    /// Height of the image in pixels
+    pub fn height(&self) -> usize {
+        self.0.height as usize
+    }
+
+    /// Horizontal coordinate of the principal point of the image, as a pixel offset from the left edge
+    pub fn ppx(&self) -> f32 {
+        self.0.ppx
+    }
+    /// Vertical coordinate of the principal point of the image, as a pixel offset from the top edge
+    pub fn ppy(&self) -> f32 {
+        self.0.ppy
+    }
+    /// Focal length of the image plane, as a multiple of pixel width
+    pub fn fx(&self) -> f32 {
+        self.0.fx
+    }
+    /// Focal length of the image plane, as a multiple of pixel height
+    pub fn fy(&self) -> f32 {
+        self.0.fy
+    }
+    /// Distortion model and coefficients of the image
+    pub fn distortion(&self) -> Rs2Distortion {
+        Rs2Distortion {
+            model: Rs2DistortionModel::from_u32(self.0.model).unwrap(),
+            coeffs: self.0.coeffs,
+        }
     }
 }
 
-impl AsRef<sys::rs2_motion_device_intrinsic> for MotionIntrinsics {
-    fn as_ref(&self) -> &sys::rs2_motion_device_intrinsic {
-        &self.0
+unsafe impl Send for Rs2Intrinsics {}
+
+/// The topology describing how the different devices are oriented.
+///
+/// Use the function `stream_profile.extrinsics()` to retrieve these extrinsics from a certain stream in relation to
+/// another stream on the same device.
+#[derive(Debug)]
+pub struct Rs2Extrinsics(pub sys::rs2_extrinsics);
+
+impl Rs2Extrinsics {
+    /// Column-major 3x3 rotation matrix
+    pub fn rotation(&self) -> [f32; 9usize] {
+        self.0.rotation
+    }
+    /// Three-element translation vector, in meters
+    pub fn translation(&self) -> [f32; 3usize] {
+        self.0.translation
     }
 }
 
-impl AsMut<sys::rs2_motion_device_intrinsic> for MotionIntrinsics {
-    fn as_mut(&mut self) -> &mut sys::rs2_motion_device_intrinsic {
-        &mut self.0
-    }
-}
-
-unsafe impl Send for MotionIntrinsics {}
-unsafe impl Sync for MotionIntrinsics {}
-
-/// The intrinsic parameters of stream.
-pub struct Intrinsics(pub sys::rs2_intrinsics);
-
-impl Deref for Intrinsics {
-    type Target = sys::rs2_intrinsics;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for Intrinsics {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl AsRef<sys::rs2_intrinsics> for Intrinsics {
-    fn as_ref(&self) -> &sys::rs2_intrinsics {
-        &self.0
-    }
-}
-
-impl AsMut<sys::rs2_intrinsics> for Intrinsics {
-    fn as_mut(&mut self) -> &mut sys::rs2_intrinsics {
-        &mut self.0
-    }
-}
-
-unsafe impl Send for Intrinsics {}
-unsafe impl Sync for Intrinsics {}
-
-/// The extrinsic parameters of stream.
-pub struct Extrinsics(pub sys::rs2_extrinsics);
-
-#[cfg(feature = "with-nalgebra")]
-impl Extrinsics {
-    pub fn to_isometry(&self) -> Isometry3<f32> {
-        let rotation = {
-            let matrix = MatrixMN::<f32, U3, U3>::from_iterator(self.0.rotation.iter().copied());
-            UnitQuaternion::from_matrix(&matrix)
-        };
-        let translation = {
-            let [x, y, z] = self.0.translation;
-            Translation3::new(x, y, z)
-        };
-        Isometry3::from_parts(translation, rotation)
-    }
-}
-
-impl Deref for Extrinsics {
-    type Target = sys::rs2_extrinsics;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for Extrinsics {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl AsRef<sys::rs2_extrinsics> for Extrinsics {
-    fn as_ref(&self) -> &sys::rs2_extrinsics {
-        &self.0
-    }
-}
-
-impl AsMut<sys::rs2_extrinsics> for Extrinsics {
-    fn as_mut(&mut self) -> &mut sys::rs2_extrinsics {
-        &mut self.0
-    }
-}
-
-unsafe impl Send for Extrinsics {}
-unsafe impl Sync for Extrinsics {}
+unsafe impl Send for Rs2Extrinsics {}

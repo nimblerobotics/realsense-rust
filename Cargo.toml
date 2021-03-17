@@ -1,5 +1,9 @@
 [package]
-authors = ["jerry73204 <jerry73204@gmail.com>", "Jeremy Steward <jeremy.steward@tangramvision.com>", "Brandon Minor <brandon@tangramvision.com>"]
+authors = [
+    "jerry73204 <jerry73204@gmail.com>",
+    "Jeremy Steward <jeremy.steward@tangramvision.com>",
+    "Brandon Minor <brandon@tangramvision.com>",
+]
 categories = ["external-ffi-bindings", "computer-vision", "hardware-support"]
 description = "High-level RealSense library in Rust"
 edition = "2018"
@@ -17,14 +21,12 @@ buildtime-bindgen = ["realsense-sys/buildtime-bindgen"]
 # This feature does nothing in terms of library functionality / behaviour, but
 # is instead for running tests that utilize a single device on the backend.
 test-single-device = []
-with-nalgebra = ["nalgebra"]
 
 [dependencies]
 anyhow = "1.0"
-nalgebra = {version = "0.24", optional = true}
 num-derive = "0.3"
 num-traits = "0.2"
-realsense-sys = {version = "0.3.0", path = "realsense-sys"}
+realsense-sys = { version = "0.3.0", path = "realsense-sys" }
 thiserror = "1.0"
 
 [dev-dependencies]

@@ -4,7 +4,7 @@
 //!
 //! - Depth Frame: A depth frame taken from a synthetic depth camera.
 //! - Disparity Frame: A disparity frame taken from a synthetic depth camera.
-//! - Video Frame: A frame holding color or monochrome data.
+//! - Color Frame: A frame holding color or monochrome data.
 //!
 //! Each frame type can hold data in multiple formats. The data type presented
 //! depends on the settings and flags used at runtime on the RealSense device.
@@ -16,14 +16,19 @@ use super::prelude::{
 };
 use crate::{
     check_rs2_error,
-    common::*,
-    kind::{Rs2Extension, Rs2FrameMetadata, Rs2Option, Rs2TimestampDomain},
+    kind::{Rs2Extension, Rs2FrameMetadata, Rs2Option, Rs2StreamKind, Rs2TimestampDomain},
     sensor::Sensor,
     stream_profile::StreamProfile,
 };
 use anyhow::Result;
-use num_traits::ToPrimitive;
-use std::convert::TryFrom;
+use num_traits::{FromPrimitive, ToPrimitive};
+use realsense_sys as sys;
+use std::{
+    convert::TryFrom,
+    marker::PhantomData,
+    os::raw::c_int,
+    ptr::{self, NonNull},
+};
 
 /// A unit struct defining a Depth frame.
 #[derive(Debug)]
@@ -47,7 +52,7 @@ pub struct Confidence;
 /// Holds the raw data pointer and derived data for an RS2 Image frame.
 ///
 /// This generic type isn't particularly useful on it's own. In all cases, you want a specialized
-/// version of this class ([`DepthFrame`], [`VideoFrame`], [`DisparityFrame`]).
+/// version of this class ([`DepthFrame`], [`ColorFrame`], [`DisparityFrame`]).
 #[derive(Debug)]
 pub struct ImageFrame<'a, Kind> {
     /// The raw data pointer from the original rs2 frame.
@@ -159,6 +164,8 @@ impl<'a, K> IntoIterator for &'a ImageFrame<'a, K> {
         self.iter()
     }
 }
+
+unsafe impl<'a, K> Send for ImageFrame<'a, K> {}
 
 impl<'a, K> TryFrom<NonNull<sys::rs2_frame>> for ImageFrame<'a, K> {
     type Error = anyhow::Error;

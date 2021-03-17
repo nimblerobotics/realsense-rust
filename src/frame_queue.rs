@@ -2,7 +2,6 @@
 
 use crate::{
     base::DEFAULT_TIMEOUT,
-    common::*,
     error::{Error as RsError, ErrorChecker, Result},
     frame::{AnyFrame, Frame, GenericFrameEx},
     frame_kind::FrameKind,
