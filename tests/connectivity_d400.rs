@@ -156,6 +156,7 @@ fn d400_streams_are_distinct() {
 
         let usb_cstr = device.info(Rs2CameraInfo::UsbTypeDescriptor).unwrap();
         let usb_val: f32 = usb_cstr.to_str().unwrap().parse().unwrap();
+        let mut expected_frame_count = 4;
         if usb_val >= 3.0 {
             // Gyro / accel streams not included here because they have a different framerate
             config
@@ -172,6 +173,7 @@ fn d400_streams_are_distinct() {
                 .enable_stream(Rs2StreamKind::Infrared, Some(2), 0, 0, Rs2Format::Y8, 30)
                 .unwrap();
         } else {
+            expected_frame_count = 2;
             config
                 .enable_device_from_serial(serial)
                 .unwrap()
@@ -188,10 +190,13 @@ fn d400_streams_are_distinct() {
 
         let frames = pipeline.wait(None).unwrap();
 
-        assert_eq!(frames.count(), 2);
+        assert_eq!(frames.count(), expected_frame_count);
         assert_eq!(frames.frames_of_type::<ColorFrame>().len(), 1);
         assert_eq!(frames.frames_of_type::<DepthFrame>().len(), 1);
-        assert_eq!(frames.frames_of_type::<InfraredFrame>().len(), 0);
+        assert_eq!(
+            frames.frames_of_type::<InfraredFrame>().len(),
+            expected_frame_count - 2
+        );
     }
 }
 

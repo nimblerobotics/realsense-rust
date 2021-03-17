@@ -139,11 +139,16 @@ macro_rules! check_rs2_error {
         {
             use crate::kind::Rs2Exception;
             use num_traits::FromPrimitive;
-
+            use std::convert::TryInto;
             let err: *mut sys::rs2_error = $rs2_error;
             if err.as_ref().is_some() {
                 let res = $result(
-                    Rs2Exception::from_u32(sys::rs2_get_librealsense_exception_type(err)).unwrap(),
+                    Rs2Exception::from_i32(
+                        sys::rs2_get_librealsense_exception_type(err)
+                            .try_into()
+                            .unwrap(),
+                    )
+                    .unwrap(),
                     std::ffi::CStr::from_ptr(sys::rs2_get_error_message(err))
                         .to_str()
                         .unwrap()

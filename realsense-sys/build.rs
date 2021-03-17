@@ -1,53 +1,52 @@
-use anyhow::Result;
-use lazy_static::lazy_static;
-use std::{
-    collections::HashSet,
-    fs::File,
-    io::{prelude::*, BufReader},
-    path::{Path, PathBuf},
-};
+fn main() {
+    if cfg!(feature = "doc-only") {
+        return;
+    }
 
-lazy_static! {
-    static ref CARGO_MANIFEST_DIR: PathBuf =
-        PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
-}
-
-fn main() -> Result<()> {
     // Probe libary
-    let library = probe_library("realsense2")?;
+    let library = pkg_config::probe_library("realsense2")
+        .expect("pkg-config failed to find realsense2 package");
+    let major_version = library
+        .version
+        .find('.')
+        .map(|i| &library.version[..i])
+        .expect("failed to determine librealsense major version");
 
-    // Verify version
-    let (include_dir, version) = library
-        .include_paths
-        .iter()
-        .collect::<HashSet<_>>()
-        .into_iter()
-        .filter_map(|path| {
-            let dir = Path::new(path).join("librealsense2");
-            if dir.is_dir() {
-                match get_version_from_header_dir(&dir) {
-                    Some(version) => Some((dir, version)),
-                    None => None,
-                }
-            } else {
-                None
-            }
-        })
-        .next()
-        .expect("fail to detect librealsense2 version");
-
-    assert_eq!(
-        &version.major,
-        "2",
-        "librealsense2 version {} is not supported",
-        version.to_string()
-    );
+    if major_version != "2" {
+        panic!(
+            "librealsense2 version {} is not supported, expected major version 2",
+            library.version
+        )
+    }
 
     // generate bindings
     #[cfg(feature = "buildtime-bindgen")]
     {
+        let cargo_manifest_dir = std::env::current_dir().unwrap();
+
+        // The function below will leave us with the directory <SDKHome>/include/librealsense2/
+        let include_dir = library
+            .include_paths
+            .iter()
+            .filter_map(|path| {
+                let dir = std::path::Path::new(path).join("librealsense2");
+                if dir.is_dir() {
+                    Some(dir)
+                } else {
+                    None
+                }
+            })
+            .next()
+            .expect("fail find librealsense2 include directory");
+
+        // pop the last item off of the include_dir to get `/include`, which we'll need to build rsutil_delegate.h
+        let mut top_include = include_dir.clone();
+        top_include.pop();
         let bindings = bindgen::Builder::default()
             .clang_arg("-fno-inline-functions")
+            // Include... `<SDKHome>/include`
+            // Again, this is just so that we can compile rsutil_delegate.h
+            .clang_arg(String::from("-I") + top_include.to_str().unwrap())
             .header(include_dir.join("rs.h").to_str().unwrap())
             .header(
                 include_dir
@@ -72,115 +71,55 @@ fn main() -> Result<()> {
             .expect("Unable to generate bindings");
 
         // Write the bindings to file
-        let bindings_dir = CARGO_MANIFEST_DIR.join("bindings");
+        let bindings_dir = cargo_manifest_dir.join("bindings");
         let bindings_file = bindings_dir.join("bindings.rs");
 
-        std::fs::create_dir_all(&bindings_dir)?;
+        if let Err(e) = std::fs::create_dir_all(&bindings_dir) {
+            panic!(
+                "failed to create directory {}: {}",
+                bindings_dir.display(),
+                e
+            );
+        }
         bindings
             .write_to_file(bindings_file)
             .expect("Couldn't write bindings!");
     }
 
-    // link the librealsense2 shared library
-    println!("cargo:rustc-link-lib=realsense2");
+    // link the libraries specified by pkg-config.
+    for dir in &library.link_paths {
+        println!("cargo:rustc-link-search=native={}", dir.to_str().unwrap());
+    }
+    for lib in &library.libs {
+        println!("cargo:rustc-link-lib={}", lib);
+    }
 
-    Ok(())
-}
-
-fn get_version_from_header_dir<P>(dir: P) -> Option<Version>
-where
-    P: AsRef<Path>,
-{
-    let header_path = dir.as_ref().join("rs.h");
-
-    let mut major_opt: Option<String> = None;
-    let mut minor_opt: Option<String> = None;
-    let mut patch_opt: Option<String> = None;
-    let mut build_opt: Option<String> = None;
-
-    let mut reader = BufReader::new(File::open(header_path).ok()?);
-    loop {
-        let mut line = String::new();
-        match reader.read_line(&mut line) {
-            Ok(0) | Err(_) => return None,
-            _ => (),
-        }
-
-        const PREFIX: &str = "#define RS2_API_";
-        if let Some(end) = line.strip_prefix(PREFIX) {
-            let mut tokens = end.split_whitespace();
-            let name_opt = tokens.next();
-            let version_opt = tokens.next();
-
-            if let (Some(name), Some(version)) = (name_opt, version_opt) {
-                let version_owned = version.to_owned();
-                match name {
-                    "MAJOR_VERSION" => major_opt = Some(version_owned),
-                    "MINOR_VERSION" => minor_opt = Some(version_owned),
-                    "PATCH_VERSION" => patch_opt = Some(version_owned),
-                    "BUILD_VERSION" => build_opt = Some(version_owned),
-                    _ => (),
-                }
-            }
-        }
-
-        if let (Some(major), Some(minor), Some(patch), Some(build)) =
-            (&major_opt, &minor_opt, &patch_opt, &build_opt)
-        {
-            let version = Version {
-                major: major.to_owned(),
-                minor: minor.to_owned(),
-                patch: patch.to_owned(),
-                build: build.to_owned(),
-            };
-            return Some(version);
+    #[cfg(target_os = "windows")]
+    if let Some(dll_loc) = &library.defines["DLL_FOLDER"] {
+        // Move DLL from DLL_FOLDER location to the deps folder for this executable.
+        //
+        // The current_exe() function returns the directory:
+        //
+        // `<topLevel>/target/<buildType>/build/realsense-sys<hash>/executable.exe`
+        //
+        // ...however, the proper place for the DLL is actually in
+        //
+        // `<topLevel>/target/<buildType>/deps`
+        //
+        // So, pop three times, add two strings, and we're good to go with the right location.
+        // Is it pretty? No. But it'll work for now.
+        let mut exe_path = std::env::current_exe().unwrap();
+        exe_path.pop();
+        exe_path.pop();
+        exe_path.pop();
+        exe_path.push("deps");
+        exe_path.push("realsense2.dll");
+        let dll_dest = exe_path.to_str().unwrap();
+        let mut dll_src = std::path::PathBuf::from(dll_loc);
+        dll_src.push("realsense2.dll");
+        match std::fs::copy(dll_src.clone(), dll_dest) {
+            Ok(_) => println!("DLL successfully copied to deps folder."),
+            Err(e) => panic!("{}; attempting from source {:#?}", e, dll_src),
         }
     }
-}
-
-fn probe_library(pkg_name: &str) -> Result<Library> {
-    let package = pkg_config::probe_library(pkg_name)?;
-    let lib = Library {
-        pkg_name: pkg_name.to_owned(),
-        libs: package.libs,
-        link_paths: package.link_paths,
-        framework_paths: package.framework_paths,
-        include_paths: package.include_paths,
-        version: package.version,
-        prefix: PathBuf::from(pkg_config::get_variable(pkg_name, "prefix")?),
-        libdir: PathBuf::from(pkg_config::get_variable(pkg_name, "libdir")?),
-    };
-    Ok(lib)
-}
-
-#[derive(Debug, Clone)]
-struct Version {
-    major: String,
-    minor: String,
-    patch: String,
-    build: String,
-}
-
-impl ToString for Version {
-    fn to_string(&self) -> String {
-        let Self {
-            major,
-            minor,
-            patch,
-            build,
-        } = self;
-        format!("{}.{}.{}.{}", major, minor, patch, build)
-    }
-}
-
-#[derive(Debug)]
-struct Library {
-    pub pkg_name: String,
-    pub libs: Vec<String>,
-    pub link_paths: Vec<PathBuf>,
-    pub framework_paths: Vec<PathBuf>,
-    pub include_paths: Vec<PathBuf>,
-    pub version: String,
-    pub prefix: PathBuf,
-    pub libdir: PathBuf,
 }

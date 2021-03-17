@@ -14,10 +14,9 @@ use crate::{
 };
 use anyhow::Result;
 use num_traits::FromPrimitive;
-use num_traits::ToPrimitive;
 use realsense_sys as sys;
 use std::{
-    convert::TryFrom,
+    convert::{TryFrom, TryInto},
     marker::PhantomData,
     ptr::{self, NonNull},
 };
@@ -153,7 +152,7 @@ impl<'a, K> TryFrom<NonNull<sys::rs2_frame>> for MotionFrame<'a, K> {
             Ok(MotionFrame {
                 frame_ptr,
                 timestamp,
-                timestamp_domain: Rs2TimestampDomain::from_u32(timestamp_domain).unwrap(),
+                timestamp_domain: Rs2TimestampDomain::from_i32(timestamp_domain as i32).unwrap(),
                 frame_stream_profile: profile,
                 motion: [motion_raw[0], motion_raw[1], motion_raw[2]],
                 should_drop: true,
@@ -195,7 +194,8 @@ impl<'a, K> FrameEx<'a> for MotionFrame<'a, K> {
 
             let val = sys::rs2_get_frame_metadata(
                 self.frame_ptr.as_ptr(),
-                metadata_kind.to_u32().unwrap(),
+                #[allow(clippy::useless_conversion)]
+                (metadata_kind as i32).try_into().unwrap(),
                 &mut err,
             );
             if err.as_ref().is_none() {
@@ -213,7 +213,8 @@ impl<'a, K> FrameEx<'a> for MotionFrame<'a, K> {
 
             let supports_metadata = sys::rs2_supports_frame_metadata(
                 self.frame_ptr.as_ptr(),
-                metadata_kind.to_u32().unwrap(),
+                #[allow(clippy::useless_conversion)]
+                (metadata_kind as i32).try_into().unwrap(),
                 &mut err,
             );
 

@@ -45,10 +45,10 @@
 //! use realsense_sys as sys;
 //! use realsense_rust::kind::Rs2CameraInfo;
 //!
-//! for i in 0..sys::rs2_camera_info_RS2_CAMERA_INFO_COUNT {
+//! for i in 0..sys::rs2_camera_info_RS2_CAMERA_INFO_COUNT as i32 {
 //!     println!(
-//!         "The enum variant {:?} corresponds to the u32 value {}",
-//!         Rs2CameraInfo::from_u32(i).unwrap(),
+//!         "The enum variant {:?} corresponds to the i32 value {}",
+//!         Rs2CameraInfo::from_i32(i).unwrap(),
 //!         i,
 //!     );
 //! }

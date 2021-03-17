@@ -8,18 +8,18 @@ use realsense_sys as sys;
 use std::ffi::CStr;
 
 /// Enumeration of possible timestamp domains that frame timestamps are delivered in.
-#[repr(u32)]
+#[repr(i32)]
 #[derive(FromPrimitive, ToPrimitive, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Rs2TimestampDomain {
     /// Timestamp is measured in relation to the device's internal clock
-    HardwareClock = sys::rs2_timestamp_domain_RS2_TIMESTAMP_DOMAIN_HARDWARE_CLOCK,
+    HardwareClock = sys::rs2_timestamp_domain_RS2_TIMESTAMP_DOMAIN_HARDWARE_CLOCK as i32,
     /// Timestamp was measured in relation to the OS (host) system clock
-    SystemTime = sys::rs2_timestamp_domain_RS2_TIMESTAMP_DOMAIN_SYSTEM_TIME,
+    SystemTime = sys::rs2_timestamp_domain_RS2_TIMESTAMP_DOMAIN_SYSTEM_TIME as i32,
     /// Timestamp was measured in relation to the device's clock converted to the system clock.
     ///
     /// The timestamp is measured directly relative to the device's internal clock, and then
     /// converted to the OS (host) system clock by measuring the difference.
-    GlobalTime = sys::rs2_timestamp_domain_RS2_TIMESTAMP_DOMAIN_GLOBAL_TIME,
+    GlobalTime = sys::rs2_timestamp_domain_RS2_TIMESTAMP_DOMAIN_GLOBAL_TIME as i32,
     // Not included since this just tells us the total number of domains
     //
     // Count = sys::rs2_timestamp_domain_RS2_TIMESTAMP_DOMAIN_COUNT,
@@ -51,9 +51,9 @@ mod tests {
 
     #[test]
     fn all_variants_exist() {
-        for i in 0..sys::rs2_timestamp_domain_RS2_TIMESTAMP_DOMAIN_COUNT {
+        for i in 0..sys::rs2_timestamp_domain_RS2_TIMESTAMP_DOMAIN_COUNT as i32 {
             assert!(
-                Rs2TimestampDomain::from_u32(i).is_some(),
+                Rs2TimestampDomain::from_i32(i).is_some(),
                 "Rs2TimestampDomain variant for ordinal {} does not exist.",
                 i,
             );

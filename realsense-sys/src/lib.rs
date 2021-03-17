@@ -79,4 +79,4 @@
 // warnings since we can't really do much about them, we'd have to fix bindgen upstream or
 // librealsense2 itself.
 #![allow(warnings)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/bindings/bindings.rs"));
+include!("../bindings/bindings.rs");

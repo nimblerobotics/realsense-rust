@@ -15,7 +15,8 @@ time to investigate).
 
 ## Running integration tests WITH DEVICE(S) connected
 
-`RUST_TEST_THREADS=1 cargo test --all-features`
+On Linux: `RUST_TEST_THREADS=1 cargo test --all-features`
+On Windows PowerShell: `$Env:RUST_TEST_THREADS=1; cargo test --all-features`
 
 Here, `--all-features` is just a quick way to enable the `test-single-device` feature (See [Cargo.toml](Cargo.toml)).
 

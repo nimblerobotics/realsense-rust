@@ -22,9 +22,13 @@ use crate::{
     stream_profile::StreamProfile,
 };
 use anyhow::Result;
-use num_traits::ToPrimitive;
 use realsense_sys as sys;
-use std::{convert::From, ffi::CStr, mem::MaybeUninit, ptr::NonNull};
+use std::{
+    convert::{From, TryInto},
+    ffi::CStr,
+    mem::MaybeUninit,
+    ptr::NonNull,
+};
 use thiserror::Error;
 
 /// Type describing errors that can occur when trying to construct a sensor.
@@ -151,7 +155,8 @@ impl Sensor {
                 let mut err = std::ptr::null_mut::<sys::rs2_error>();
                 let is_extendable = sys::rs2_is_sensor_extendable_to(
                     self.sensor_ptr.as_ptr(),
-                    ext.to_u32().unwrap(),
+                    #[allow(clippy::useless_conversion)]
+                    (**ext as i32).try_into().unwrap(),
                     &mut err,
                 );
 
@@ -180,7 +185,8 @@ impl Sensor {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
             let val = sys::rs2_get_option(
                 self.sensor_ptr.as_ptr().cast::<sys::rs2_options>(),
-                option.to_u32().unwrap(),
+                #[allow(clippy::useless_conversion)]
+                (option as i32).try_into().unwrap(),
                 &mut err,
             );
 
@@ -221,7 +227,8 @@ impl Sensor {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
             sys::rs2_set_option(
                 self.sensor_ptr.as_ptr().cast::<sys::rs2_options>(),
-                option.to_u32().unwrap(),
+                #[allow(clippy::useless_conversion)]
+                (option as i32).try_into().unwrap(),
                 value,
                 &mut err,
             );
@@ -250,7 +257,8 @@ impl Sensor {
 
             sys::rs2_get_option_range(
                 self.sensor_ptr.as_ptr().cast::<sys::rs2_options>(),
-                option.to_u32().unwrap(),
+                #[allow(clippy::useless_conversion)]
+                (option as i32).try_into().unwrap(),
                 min.as_mut_ptr(),
                 max.as_mut_ptr(),
                 step.as_mut_ptr(),
@@ -281,7 +289,8 @@ impl Sensor {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
             let val = sys::rs2_supports_option(
                 self.sensor_ptr.as_ptr().cast::<sys::rs2_options>(),
-                option.to_u32().unwrap(),
+                #[allow(clippy::useless_conversion)]
+                (option as i32).try_into().unwrap(),
                 &mut err,
             );
 
@@ -307,7 +316,8 @@ impl Sensor {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
             let val = sys::rs2_is_option_read_only(
                 self.sensor_ptr.as_ptr().cast::<sys::rs2_options>(),
-                option.to_u32().unwrap(),
+                #[allow(clippy::useless_conversion)]
+                (option as i32).try_into().unwrap(),
                 &mut err,
             );
 
@@ -378,7 +388,8 @@ impl Sensor {
 
             let val = sys::rs2_get_sensor_info(
                 self.sensor_ptr.as_ptr(),
-                camera_info.to_u32().unwrap(),
+                #[allow(clippy::useless_conversion)]
+                (camera_info as i32).try_into().unwrap(),
                 &mut err,
             );
 
@@ -400,7 +411,8 @@ impl Sensor {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
             let supports_info = sys::rs2_supports_sensor_info(
                 self.sensor_ptr.as_ptr(),
-                camera_info.to_u32().unwrap(),
+                #[allow(clippy::useless_conversion)]
+                (camera_info as i32).try_into().unwrap(),
                 &mut err,
             );
 

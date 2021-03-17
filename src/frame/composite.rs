@@ -8,9 +8,11 @@
 
 use super::prelude::FrameCategory;
 use crate::kind::Rs2StreamKind;
-use num_traits::ToPrimitive;
 use realsense_sys as sys;
-use std::{convert::TryFrom, ptr::NonNull};
+use std::{
+    convert::{TryFrom, TryInto},
+    ptr::NonNull,
+};
 
 /// Holds the raw data pointer from an RS2 Composite frame type.
 pub struct CompositeFrame {
@@ -86,7 +88,8 @@ impl CompositeFrame {
 
                 let is_extendable_to = sys::rs2_is_frame_extendable_to(
                     nonnull_frame_ptr.as_ptr(),
-                    F::extension().to_u32().unwrap(),
+                    #[allow(clippy::useless_conversion)]
+                    (F::extension() as i32).try_into().unwrap(),
                     &mut err,
                 );
 

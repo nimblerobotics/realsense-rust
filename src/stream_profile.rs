@@ -196,8 +196,8 @@ impl<'a> TryFrom<NonNull<sys::rs2_stream_profile>> for StreamProfile<'a> {
 
             Ok(StreamProfile {
                 ptr: stream_profile_ptr,
-                stream: Rs2StreamKind::from_u32(stream.assume_init()).unwrap(),
-                format: Rs2Format::from_u32(format.assume_init()).unwrap(),
+                stream: Rs2StreamKind::from_i32(stream.assume_init() as i32).unwrap(),
+                format: Rs2Format::from_i32(format.assume_init() as i32).unwrap(),
                 index: index.assume_init() as usize,
                 unique_id: unique_id.assume_init(),
                 framerate: framerate.assume_init(),

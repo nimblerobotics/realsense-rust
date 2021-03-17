@@ -1,5 +1,9 @@
 [package]
-authors = ["jerry73204 <jerry73204@gmail.com>", "Jeremy Steward <jeremy.steward@tangramvision.com>", "Brandon Minor <brandon@tangramvision.com>"]
+authors = [
+    "jerry73204 <jerry73204@gmail.com>",
+    "Jeremy Steward <jeremy.steward@tangramvision.com>",
+    "Brandon Minor <brandon@tangramvision.com>",
+]
 categories = ["external-ffi-bindings", "computer-vision", "hardware-support"]
 description = "Rust abstraction layer for the RealSense SDK C library"
 edition = "2018"
@@ -27,12 +31,5 @@ buildtime-bindgen = ["bindgen"]
 # None required. However, access to the RealSense library is necessary.
 
 [build-dependencies]
-anyhow = "1.0"
-bindgen = {version = "0.57", optional = true}
-lazy_static = "1.4"
-
-[target.'cfg(not(target_env = "msvc"))'.build-dependencies]
-pkg-config = {version = "0.3"}
-
-[target.'cfg(target_env = "msvc")'.build-dependencies]
-vcpkg = {version = "0.2"}
+bindgen = { version = "0.57", optional = true }
+pkg-config = { version = "0.3" }

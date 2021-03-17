@@ -32,7 +32,7 @@ where
                 .chain(Some(0))
                 .map(|b| {
                     let b = b.to_ne_bytes();
-                    b.get(0).map(|s| *s).into_iter().chain(b.get(1).map(|s| *s))
+                    b.get(0).copied().into_iter().chain(b.get(1).copied())
                 })
                 .flatten(),
         );
@@ -131,7 +131,7 @@ impl Rs2Intrinsics {
     /// Distortion model and coefficients of the image
     pub fn distortion(&self) -> Rs2Distortion {
         Rs2Distortion {
-            model: Rs2DistortionModel::from_u32(self.0.model).unwrap(),
+            model: Rs2DistortionModel::from_i32(self.0.model as i32).unwrap(),
             coeffs: self.0.coeffs,
         }
     }
