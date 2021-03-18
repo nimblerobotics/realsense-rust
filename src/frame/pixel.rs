@@ -8,6 +8,7 @@ use crate::kind::Rs2Format;
 use std::{os::raw::c_void, slice};
 
 /// Type for representing the various pixel formats.
+#[derive(Debug)]
 pub enum PixelKind<'a> {
     /// 32-bit `y0, u, y1, v` data for every two pixels.
     /// Similar to YUV422 but packed in a different order - see [this link](https://en.wikipedia.org/wiki/YUV).

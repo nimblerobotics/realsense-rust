@@ -22,6 +22,7 @@ pub enum FrameWaitError {
 }
 
 /// Type representing an "active" pipeline which is configured and can acquire frames.
+#[derive(Debug)]
 pub struct ActivePipeline<'a> {
     pipeline_ptr: NonNull<sys::rs2_pipeline>,
     profile: PipelineProfile<'a>,

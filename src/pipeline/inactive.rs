@@ -29,6 +29,7 @@ pub enum PipelineActivationError {
 }
 
 /// A type describing an "inactive" pipeline which is unconfigured and cannot acquire frames.
+#[derive(Debug)]
 pub struct InactivePipeline<'a> {
     pipeline_ptr: NonNull<sys::rs2_pipeline>,
     context: &'a Context,
