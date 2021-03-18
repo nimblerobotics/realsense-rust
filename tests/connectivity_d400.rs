@@ -98,7 +98,7 @@ fn d400_streams_at_expected_framerate() {
 
         assert!(pipeline.can_resolve(&config));
 
-        let mut pipeline = pipeline.start(Some(&config)).unwrap();
+        let mut pipeline = pipeline.start(Some(config)).unwrap();
 
         let mut nframes = 0usize;
         let number_of_seconds = 5;
@@ -186,7 +186,7 @@ fn d400_streams_are_distinct() {
         }
 
         let pipeline = InactivePipeline::try_from(&context).unwrap();
-        let mut pipeline = pipeline.start(Some(&config)).unwrap();
+        let mut pipeline = pipeline.start(Some(config)).unwrap();
 
         let frames = pipeline.wait(None).unwrap();
 
@@ -262,7 +262,7 @@ fn d400_streams_check_supported_but_ignored_sensor_options() {
             .unwrap();
 
         let pipeline = InactivePipeline::try_from(&context).unwrap();
-        let _pipeline = pipeline.start(Some(&config)).unwrap();
+        let _pipeline = pipeline.start(Some(config)).unwrap();
 
         for sensor in device.sensors() {
             for (option, val) in &options_to_set {

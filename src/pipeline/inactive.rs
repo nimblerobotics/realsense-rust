@@ -80,18 +80,16 @@ impl<'a> InactivePipeline<'a> {
     /// Start the pipeline with an optional config.
     ///
     /// The method consumes inactive pipeline itself, and returns the started pipeine.
-    pub fn start(self, config: Option<&'a Config>) -> Result<ActivePipeline<'a>> {
-        if let Some(c) = config {
-            if !self.can_resolve(c) {
-                return Err(anyhow::anyhow!(
-                    PipelineActivationError::ConfigCannotBeResolved
-                ));
-            }
-        }
-
+    pub fn start(self, config: Option<Config>) -> Result<ActivePipeline<'a>> {
         unsafe {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
             let profile_ptr = if let Some(conf) = config {
+                if !self.can_resolve(&conf) {
+                    return Err(anyhow::anyhow!(
+                        PipelineActivationError::ConfigCannotBeResolved
+                    ));
+                }
+
                 sys::rs2_pipeline_start_with_config(
                     self.pipeline_ptr.as_ptr(),
                     conf.get_raw().as_ptr(),

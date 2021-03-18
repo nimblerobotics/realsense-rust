@@ -59,7 +59,7 @@ pub fn main() -> Result<()> {
     }
 
     // Change pipeline's type from InactivePipeline -> ActivePipeline
-    let mut pipeline = pipeline.start(Some(&config))?;
+    let mut pipeline = pipeline.start(Some(config))?;
     let mut distance = 0.0;
     let mut motion = [0.0, 0.0, 0.0];
 
