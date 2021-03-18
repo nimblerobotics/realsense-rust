@@ -4,7 +4,7 @@ use super::{inactive::InactivePipeline, profile::PipelineProfile};
 use crate::{check_rs2_error, context::Context, frame::CompositeFrame, kind::Rs2Exception};
 use anyhow::Result;
 use realsense_sys as sys;
-use std::{ptr::NonNull, time::Duration};
+use std::{ptr::NonNull, task::Poll, time::Duration};
 use thiserror::Error;
 
 /// Enumeration over possible errors that can occur when waiting for a frame.
@@ -13,6 +13,9 @@ pub enum FrameWaitError {
     /// librealsense2 had an internal error occur while waiting for frames.
     #[error("An internal error occurred while waiting for frames. Type: {0}; Reason: {1}")]
     DidErrorDuringFrameWait(Rs2Exception, String),
+    /// librealsense2 had an internal error while polling for the next set of frames.
+    #[error("An internal error occurred while polling for the next set of frames. Type: {0}; Reason: {1}")]
+    DidErrorDuringFramePoll(Rs2Exception, String),
     /// The associated function timed out while waiting for frames.
     #[error("Timed out while waiting for frame.")]
     DidTimeoutBeforeFrameArrival,
@@ -97,7 +100,7 @@ impl<'a> ActivePipeline<'a> {
     /// Returns [`FrameWaitError::DidTimeoutBeforeFrameArrival`] if the thread waits more than
     /// `timeout_ms` (in milliseconds) without returning a frame.
     ///
-    pub fn wait(&mut self, timeout_ms: Option<Duration>) -> Result<CompositeFrame> {
+    pub fn wait(&mut self, timeout_ms: Option<Duration>) -> Result<CompositeFrame, FrameWaitError> {
         let timeout_ms = match timeout_ms {
             Some(d) => d.as_millis() as u32,
             None => sys::RS2_DEFAULT_TIMEOUT,
@@ -126,9 +129,7 @@ impl<'a> ActivePipeline<'a> {
             if did_get_frame != 0 {
                 Ok(CompositeFrame::from(NonNull::new(frame).unwrap()))
             } else {
-                Err(anyhow::anyhow!(
-                    FrameWaitError::DidTimeoutBeforeFrameArrival
-                ))
+                Err(FrameWaitError::DidTimeoutBeforeFrameArrival)
             }
         }
     }
@@ -136,22 +137,31 @@ impl<'a> ActivePipeline<'a> {
     /// Poll if next frame is immediately available.
     ///
     /// Unlike [`ActivePipeline::wait`], the method does not block and returns None immediately if
-    /// the next frame is not available.
-    pub fn poll(&mut self) -> Option<CompositeFrame> {
+    /// the next frame is not available. Returns [`Poll::Pending`] if no frame is yet available,
+    /// and returns [`Poll::Ready`] if the next composite frame is found.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FrameWaitError::DidErrorDuringFramePoll`] if an internal error occurs while
+    /// polling for the next frame.
+    ///
+    pub fn poll(&mut self) -> Result<Poll<CompositeFrame>, FrameWaitError> {
         unsafe {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
             let mut frame_ptr = std::ptr::null_mut::<sys::rs2_frame>();
-            let _ = sys::rs2_pipeline_poll_for_frames(
+            let did_get_frame = sys::rs2_pipeline_poll_for_frames(
                 self.pipeline_ptr.as_ptr(),
                 &mut frame_ptr,
                 &mut err,
             );
+            check_rs2_error!(err, FrameWaitError::DidErrorDuringFramePoll)?;
 
-            if err.as_ref().is_none() {
-                Some(CompositeFrame::from(NonNull::new(frame_ptr)?))
+            if did_get_frame != 0 {
+                Ok(Poll::Ready(CompositeFrame::from(
+                    NonNull::new(frame_ptr).unwrap(),
+                )))
             } else {
-                sys::rs2_free_error(err);
-                None
+                Ok(Poll::Pending)
             }
         }
     }

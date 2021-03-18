@@ -15,6 +15,7 @@ use std::{
 };
 
 /// Holds the raw data pointer from an RS2 Composite frame type.
+#[derive(Debug)]
 pub struct CompositeFrame {
     /// The raw data pointer from the original rs2 frame
     pub ptr: NonNull<sys::rs2_frame>,
