@@ -3,7 +3,7 @@
 //! The project provides high-level bindings (crate `realsense_rust`) to librealsense2 library as well as low-level FFI
 //! (crate `realsense_sys`) interface.
 //!
-//! **Current librealsense version: 2.42.0**
+//! **Default bindings are for librealsense version: 2.42.0**
 //!
 //! This project is hosted on both [Github](https://github.com/Tangram-Vision/realsense-rust) and
 //! [Gitlab](https://gitlab.com/tangram-vision-oss/realsense-rust/). While we're happy to receive pull / merge requests
@@ -17,14 +17,6 @@
 //!
 //! Once that's done, add this crate to your project's `Cargo.toml`.
 //!
-//! *Backwards compatibility*: If you're using an older librealsense version, you may enable `buildtime-bindgen` to
-//! re-generate the bindings. We make no claims of backwards compatibility; good luck.
-//!
-//! ```toml
-//! [dependencies]
-//! realsense-rust = { version = "<current version>", features = ["buildtime-bindgen"] }
-//! ```
-//!
 //! ## Examples and Usage
 //!
 //! Check out the examples folder for helpful snippets of code, as well as minimal configurations that fit some of the
@@ -36,6 +28,14 @@
 //!
 //! - **buildtime-bindgen**: Generate Rust bindings during build time.
 //! - **device-test**: Enable tests that requires connections to RealSense devices.
+//!
+//! ## Regenerating the API Bindings
+//!
+//! *Non-Linux users*: The current bindings are formatted for Linux. Users on systems other than Linux must run with the
+//! `buildtime-bindgen` feature to reformat the bindings. See the README in realsense-sys for more.
+//!
+//! *Backwards compatibility*: If you're using an older librealsense version, you may enable the `buildtime-bindgen`
+//! feature to re-generate the bindings. We make no claims of backwards compatibility; good luck.
 //!
 //! ## Special Considerations
 //!
