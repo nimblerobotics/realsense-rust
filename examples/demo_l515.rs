@@ -17,6 +17,7 @@ use std::{
     collections::HashSet,
     convert::TryFrom,
     io::{self, Write},
+    sync::Arc,
     time::Duration,
 };
 
@@ -24,12 +25,12 @@ pub fn main() -> Result<()> {
     // Check for depth or color-compatible devices.
     let mut queried_devices = HashSet::new();
     queried_devices.insert(Rs2ProductLine::L500);
-    let context = Context::new()?;
+    let context = Arc::new(Context::new()?);
     let devices = context.query_devices(queried_devices);
     ensure!(!devices.is_empty(), "No devices found.");
 
     // Create pipeline
-    let pipeline = InactivePipeline::try_from(&context)?;
+    let pipeline = InactivePipeline::try_from(context)?;
     let mut config = Config::new();
 
     // Check the USB speed of our connection

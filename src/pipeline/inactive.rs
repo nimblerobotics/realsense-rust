@@ -4,7 +4,7 @@ use super::{active::ActivePipeline, profile::PipelineProfile};
 use crate::{check_rs2_error, config::Config, context::Context, kind::Rs2Exception};
 use anyhow::Result;
 use realsense_sys as sys;
-use std::{convert::TryFrom, ptr::NonNull};
+use std::{convert::TryFrom, ptr::NonNull, sync::Arc};
 use thiserror::Error;
 
 /// Enumeration of possible errors that can occur during pipeline construction.
@@ -30,12 +30,12 @@ pub enum PipelineActivationError {
 
 /// A type describing an "inactive" pipeline which is unconfigured and cannot acquire frames.
 #[derive(Debug)]
-pub struct InactivePipeline<'a> {
+pub struct InactivePipeline {
     pipeline_ptr: NonNull<sys::rs2_pipeline>,
-    context: &'a Context,
+    context: Arc<Context>,
 }
 
-impl<'a> Drop for InactivePipeline<'a> {
+impl Drop for InactivePipeline {
     fn drop(&mut self) {
         unsafe {
             sys::rs2_delete_pipeline(self.pipeline_ptr.as_ptr());
@@ -43,12 +43,12 @@ impl<'a> Drop for InactivePipeline<'a> {
     }
 }
 
-unsafe impl<'a> Send for InactivePipeline<'a> {}
+unsafe impl Send for InactivePipeline {}
 
-impl<'a> TryFrom<&'a Context> for InactivePipeline<'a> {
+impl TryFrom<Arc<Context>> for InactivePipeline {
     type Error = anyhow::Error;
 
-    fn try_from(context: &'a Context) -> Result<Self, Self::Error> {
+    fn try_from(context: Arc<Context>) -> Result<Self, Self::Error> {
         unsafe {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
             let context_ptr = context.get_raw();
@@ -67,11 +67,11 @@ impl<'a> TryFrom<&'a Context> for InactivePipeline<'a> {
     }
 }
 
-impl<'a> InactivePipeline<'a> {
+impl InactivePipeline {
     /// Constructs a new inactive pipeline from the constituent components
     ///
     /// This is only to be used / called from the [`ActivePipeline`] type.
-    pub(crate) fn new(pipeline_ptr: NonNull<sys::rs2_pipeline>, context: &'a Context) -> Self {
+    pub(crate) fn new(pipeline_ptr: NonNull<sys::rs2_pipeline>, context: Arc<Context>) -> Self {
         Self {
             pipeline_ptr,
             context,
@@ -81,7 +81,7 @@ impl<'a> InactivePipeline<'a> {
     /// Start the pipeline with an optional config.
     ///
     /// The method consumes inactive pipeline itself, and returns the started pipeine.
-    pub fn start(self, config: Option<Config>) -> Result<ActivePipeline<'a>> {
+    pub fn start(self, config: Option<Config>) -> Result<ActivePipeline<'static>> {
         unsafe {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
             let profile_ptr = if let Some(conf) = config {
@@ -102,7 +102,7 @@ impl<'a> InactivePipeline<'a> {
             check_rs2_error!(err, PipelineActivationError::CouldNotStartPipelineError)?;
 
             let profile = PipelineProfile::try_from(NonNull::new(profile_ptr).unwrap())?;
-            let active = ActivePipeline::new(self.pipeline_ptr, profile, self.context);
+            let active = ActivePipeline::new(self.pipeline_ptr, profile, self.context.clone());
 
             std::mem::forget(self);
             Ok(active)
@@ -116,7 +116,7 @@ impl<'a> InactivePipeline<'a> {
     /// that will be used as the active profile when the pipeline is started. Otherwise, if this
     /// configuration cannot resolve, this will return `None`.
     ///
-    pub fn resolve(&self, config: &'a Config) -> Option<PipelineProfile> {
+    pub fn resolve(&self, config: &Config) -> Option<PipelineProfile> {
         if !self.can_resolve(config) {
             return None;
         }
@@ -147,7 +147,7 @@ impl<'a> InactivePipeline<'a> {
     /// Returns true iff the configuration can be satisfied and a pipeline profile can be
     /// constructed.
     ///
-    pub fn can_resolve(&self, config: &'a Config) -> bool {
+    pub fn can_resolve(&self, config: &Config) -> bool {
         unsafe {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
             let can_resolve = sys::rs2_config_can_resolve(

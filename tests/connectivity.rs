@@ -8,7 +8,7 @@ use realsense_rust::{
     kind::{Rs2Format, Rs2ProductLine, Rs2StreamKind},
     pipeline::InactivePipeline,
 };
-use std::{collections::HashSet, convert::TryFrom};
+use std::{collections::HashSet, convert::TryFrom, sync::Arc};
 
 /// Ensure at least one intel device is "connected" as far as the driver is concerned.
 ///
@@ -26,18 +26,18 @@ fn ensure_at_least_one_intel_device_connected() {
 
 #[test]
 fn can_resolve_all_streams_always() {
-    let context = Context::new().unwrap();
+    let context = Arc::new(Context::new().unwrap());
     let mut config = Config::new();
     config.enable_all_streams().unwrap();
 
-    let pipeline = InactivePipeline::try_from(&context).unwrap();
+    let pipeline = InactivePipeline::try_from(context).unwrap();
 
     assert!(pipeline.can_resolve(&config));
 }
 
 #[test]
 fn cannot_resolve_bad_config() {
-    let context = Context::new().unwrap();
+    let context = Arc::new(Context::new().unwrap());
     let mut config = Config::new();
 
     config
@@ -54,7 +54,7 @@ fn cannot_resolve_bad_config() {
         )
         .unwrap();
 
-    let pipeline = InactivePipeline::try_from(&context).unwrap();
+    let pipeline = InactivePipeline::try_from(context).unwrap();
 
     assert!(!pipeline.can_resolve(&config));
     assert!(pipeline.resolve(&config).is_none());
