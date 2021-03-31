@@ -12,13 +12,12 @@ use realsense_rust::{
 use std::{
     collections::{HashMap, HashSet},
     convert::TryFrom,
-    sync::Arc,
     time::Duration,
 };
 
 #[test]
 fn l500_can_resolve_color_and_depth_and_infrared() {
-    let context = Arc::new(Context::new().unwrap());
+    let context = Context::new().unwrap();
 
     let mut queryable_set = HashSet::new();
     queryable_set.insert(Rs2ProductLine::L500);
@@ -41,7 +40,7 @@ fn l500_can_resolve_color_and_depth_and_infrared() {
             .enable_stream(Rs2StreamKind::Infrared, Some(0), 0, 0, Rs2Format::Y8, 30)
             .unwrap();
 
-        let pipeline = InactivePipeline::try_from(context).unwrap();
+        let pipeline = InactivePipeline::try_from(&context).unwrap();
 
         assert!(pipeline.can_resolve(&config));
         assert!(pipeline.resolve(&config).is_some());
@@ -50,7 +49,7 @@ fn l500_can_resolve_color_and_depth_and_infrared() {
 
 #[test]
 fn l500_streams_at_expected_framerate() {
-    let context = Arc::new(Context::new().unwrap());
+    let context = Context::new().unwrap();
 
     let mut queryable_set = HashSet::new();
     queryable_set.insert(Rs2ProductLine::L500);
@@ -94,7 +93,7 @@ fn l500_streams_at_expected_framerate() {
                 .unwrap();
         }
 
-        let pipeline = InactivePipeline::try_from(context).unwrap();
+        let pipeline = InactivePipeline::try_from(&context).unwrap();
 
         assert!(pipeline.can_resolve(&config));
 
@@ -143,7 +142,7 @@ fn l500_streams_at_expected_framerate() {
 
 #[test]
 fn l500_streams_are_distinct() {
-    let context = Arc::new(Context::new().unwrap());
+    let context = Context::new().unwrap();
 
     let mut queryable_set = HashSet::new();
     queryable_set.insert(Rs2ProductLine::L500);
@@ -165,7 +164,7 @@ fn l500_streams_are_distinct() {
             .enable_stream(Rs2StreamKind::Infrared, None, 0, 0, Rs2Format::Y8, 30)
             .unwrap();
 
-        let pipeline = InactivePipeline::try_from(context).unwrap();
+        let pipeline = InactivePipeline::try_from(&context).unwrap();
         let mut pipeline = pipeline.start(Some(config)).unwrap();
 
         let frames = pipeline.wait(None).unwrap();
@@ -204,7 +203,7 @@ fn l500_streams_check_supported_but_ignored_sensor_options() {
     let options_to_set = possible_options_and_vals_map();
     let options_ignored = supported_but_ignored_options_and_vals_map();
 
-    let context = Arc::new(Context::new().unwrap());
+    let context = Context::new().unwrap();
 
     let mut queryable_set = HashSet::new();
     queryable_set.insert(Rs2ProductLine::L500);
@@ -237,7 +236,7 @@ fn l500_streams_check_supported_but_ignored_sensor_options() {
             .enable_stream(Rs2StreamKind::Infrared, None, 0, 0, Rs2Format::Y8, 30)
             .unwrap();
 
-        let pipeline = InactivePipeline::try_from(context).unwrap();
+        let pipeline = InactivePipeline::try_from(&context).unwrap();
         let _pipeline = pipeline.start(Some(config)).unwrap();
 
         for sensor in device.sensors() {

@@ -1,10 +1,10 @@
 //! Defines the pipeline type.
 
 use super::{inactive::InactivePipeline, profile::PipelineProfile};
-use crate::{check_rs2_error, context::Context, frame::CompositeFrame, kind::Rs2Exception};
+use crate::{check_rs2_error, frame::CompositeFrame, kind::Rs2Exception};
 use anyhow::Result;
 use realsense_sys as sys;
-use std::{ptr::NonNull, sync::Arc, task::Poll, time::Duration};
+use std::{ptr::NonNull, task::Poll, time::Duration};
 use thiserror::Error;
 
 /// Enumeration over possible errors that can occur when waiting for a frame.
@@ -26,7 +26,6 @@ pub enum FrameWaitError {
 pub struct ActivePipeline<'a> {
     pipeline_ptr: NonNull<sys::rs2_pipeline>,
     profile: PipelineProfile<'a>,
-    context: Arc<Context>,
 }
 
 impl<'a> Drop for ActivePipeline<'a> {
@@ -46,12 +45,10 @@ impl<'a> ActivePipeline<'a> {
     pub(crate) fn new(
         pipeline_ptr: NonNull<sys::rs2_pipeline>,
         profile: PipelineProfile<'a>,
-        context: Arc<Context>,
     ) -> Self {
         Self {
             pipeline_ptr,
             profile,
-            context,
         }
     }
 
@@ -74,7 +71,7 @@ impl<'a> ActivePipeline<'a> {
             // dealing with the error (and thus returning a result type) is superfluous here.
             sys::rs2_pipeline_stop(self.pipeline_ptr.as_ptr(), &mut err);
 
-            let inactive = InactivePipeline::new(self.pipeline_ptr, self.context.clone());
+            let inactive = InactivePipeline::new(self.pipeline_ptr);
 
             std::mem::forget(self);
             inactive

@@ -4,7 +4,7 @@ use super::{active::ActivePipeline, profile::PipelineProfile};
 use crate::{check_rs2_error, config::Config, context::Context, kind::Rs2Exception};
 use anyhow::Result;
 use realsense_sys as sys;
-use std::{convert::TryFrom, ptr::NonNull, sync::Arc};
+use std::{convert::TryFrom, ptr::NonNull};
 use thiserror::Error;
 
 /// Enumeration of possible errors that can occur during pipeline construction.
@@ -32,7 +32,6 @@ pub enum PipelineActivationError {
 #[derive(Debug)]
 pub struct InactivePipeline {
     pipeline_ptr: NonNull<sys::rs2_pipeline>,
-    context: Arc<Context>,
 }
 
 impl Drop for InactivePipeline {
@@ -45,10 +44,10 @@ impl Drop for InactivePipeline {
 
 unsafe impl Send for InactivePipeline {}
 
-impl TryFrom<Arc<Context>> for InactivePipeline {
+impl TryFrom<&Context> for InactivePipeline {
     type Error = anyhow::Error;
 
-    fn try_from(context: Arc<Context>) -> Result<Self, Self::Error> {
+    fn try_from(context: &Context) -> Result<Self, Self::Error> {
         unsafe {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
             let context_ptr = context.get_raw();
@@ -59,10 +58,7 @@ impl TryFrom<Arc<Context>> for InactivePipeline {
                 PipelineConstructionError::CouldNotCreatePipelineFromContext
             )?;
 
-            Ok(Self {
-                pipeline_ptr: NonNull::new(pipeline_ptr).unwrap(),
-                context,
-            })
+            Ok(Self::new(NonNull::new(pipeline_ptr).unwrap()))
         }
     }
 }
@@ -71,11 +67,8 @@ impl InactivePipeline {
     /// Constructs a new inactive pipeline from the constituent components
     ///
     /// This is only to be used / called from the [`ActivePipeline`] type.
-    pub(crate) fn new(pipeline_ptr: NonNull<sys::rs2_pipeline>, context: Arc<Context>) -> Self {
-        Self {
-            pipeline_ptr,
-            context,
-        }
+    pub(crate) fn new(pipeline_ptr: NonNull<sys::rs2_pipeline>) -> Self {
+        Self { pipeline_ptr }
     }
 
     /// Start the pipeline with an optional config.
@@ -102,7 +95,7 @@ impl InactivePipeline {
             check_rs2_error!(err, PipelineActivationError::CouldNotStartPipelineError)?;
 
             let profile = PipelineProfile::try_from(NonNull::new(profile_ptr).unwrap())?;
-            let active = ActivePipeline::new(self.pipeline_ptr, profile, self.context.clone());
+            let active = ActivePipeline::new(self.pipeline_ptr, profile);
 
             std::mem::forget(self);
             Ok(active)
