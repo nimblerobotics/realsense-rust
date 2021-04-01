@@ -22,7 +22,7 @@ use std::{
 
 /// Holds information describing the motion and position of a device at a point in time.
 #[derive(Debug)]
-pub struct PoseFrame<'a> {
+pub struct PoseFrame {
     /// The raw data pointer from the original rs2 frame.
     frame_ptr: NonNull<sys::rs2_frame>,
     /// The timestamp of the frame.
@@ -30,7 +30,7 @@ pub struct PoseFrame<'a> {
     /// The RealSense time domain from which the timestamp is derived.
     timestamp_domain: Rs2TimestampDomain,
     /// The Stream Profile that created the frame.
-    frame_stream_profile: StreamProfile<'a>,
+    frame_stream_profile: StreamProfile,
     // The rs2 Pose data
     data: sys::rs2_pose,
     /// A boolean used during `Drop` calls. This allows for proper handling of the pointer
@@ -50,7 +50,7 @@ pub enum Confidence {
     High,
 }
 
-impl<'a> PoseFrame<'a> {
+impl PoseFrame {
     /// X, Y, Z values of translation, in meters (relative to initial position)
     pub fn translation(&self) -> [f32; 3] {
         let sys::rs2_vector { x, y, z } = self.data.translation;
@@ -110,7 +110,7 @@ impl<'a> PoseFrame<'a> {
     }
 }
 
-impl<'a> Drop for PoseFrame<'a> {
+impl Drop for PoseFrame {
     /// Drop the raw pointer stored with this struct whenever it goes out of scope.
     fn drop(&mut self) {
         unsafe {
@@ -121,9 +121,9 @@ impl<'a> Drop for PoseFrame<'a> {
     }
 }
 
-unsafe impl<'a> Send for PoseFrame<'a> {}
+unsafe impl Send for PoseFrame {}
 
-impl<'a> FrameCategory for PoseFrame<'a> {
+impl FrameCategory for PoseFrame {
     fn extension() -> Rs2Extension {
         Rs2Extension::PoseFrame
     }
@@ -137,7 +137,7 @@ impl<'a> FrameCategory for PoseFrame<'a> {
     }
 }
 
-impl<'a> TryFrom<NonNull<sys::rs2_frame>> for PoseFrame<'a> {
+impl TryFrom<NonNull<sys::rs2_frame>> for PoseFrame {
     type Error = anyhow::Error;
 
     /// Attempt to construct a PoseFrame from the raw pointer to `rs2_frame`
@@ -190,8 +190,8 @@ impl<'a> TryFrom<NonNull<sys::rs2_frame>> for PoseFrame<'a> {
     }
 }
 
-impl<'a> FrameEx<'a> for PoseFrame<'a> {
-    fn stream_profile(&'a self) -> &'a StreamProfile<'a> {
+impl FrameEx for PoseFrame {
+    fn stream_profile(&self) -> &StreamProfile {
         &self.frame_stream_profile
     }
 

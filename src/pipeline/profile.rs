@@ -8,9 +8,9 @@ use thiserror::Error;
 
 /// Type representing the device and streams associated with a pipeline.
 #[derive(Debug)]
-pub struct PipelineProfile<'a> {
+pub struct PipelineProfile {
     device: Device,
-    streams: Vec<StreamProfile<'a>>,
+    streams: Vec<StreamProfile>,
 }
 
 /// Type representing possible errors that can occur during pipeline profile construction.
@@ -31,7 +31,7 @@ pub enum PipelineProfileConstructionError {
     CouldNotRetrieveStreamCount(Rs2Exception, String),
 }
 
-impl<'a> TryFrom<NonNull<sys::rs2_pipeline_profile>> for PipelineProfile<'a> {
+impl TryFrom<NonNull<sys::rs2_pipeline_profile>> for PipelineProfile {
     type Error = anyhow::Error;
 
     /// Attempts to construct a `PipelineProfile` from an `rs2_pipeline_profile` pointer.
@@ -88,14 +88,14 @@ impl<'a> TryFrom<NonNull<sys::rs2_pipeline_profile>> for PipelineProfile<'a> {
     }
 }
 
-impl<'a> PipelineProfile<'a> {
+impl PipelineProfile {
     /// Gets the device associated with a pipeline.
-    pub fn device(&'a self) -> &'a Device {
+    pub fn device(&self) -> &Device {
         &self.device
     }
 
     /// Gets list of streams associated with a pipeline.
-    pub fn streams(&'a self) -> &'a Vec<StreamProfile<'a>> {
+    pub fn streams(&self) -> &Vec<StreamProfile> {
         &self.streams
     }
 }

@@ -34,7 +34,7 @@ pub struct Gyro;
 /// Everything called from here during runtime should be valid as long as the
 /// Frame is in scope... like normal Rust.
 #[derive(Debug)]
-pub struct MotionFrame<'a, Kind> {
+pub struct MotionFrame<Kind> {
     /// The raw data pointer from the original rs2 frame.
     frame_ptr: NonNull<sys::rs2_frame>,
     /// The timestamp of the frame.
@@ -42,7 +42,7 @@ pub struct MotionFrame<'a, Kind> {
     /// The RealSense time domain from which the timestamp is derived.
     timestamp_domain: Rs2TimestampDomain,
     /// The Stream Profile that created the frame.
-    frame_stream_profile: StreamProfile<'a>,
+    frame_stream_profile: StreamProfile,
     /// The motion data held in this Motion Frame. Motion data is represented as a
     /// 3-vector, with different conventions depending on the device recorded.
     /// See the [motion](MotionFrame::motion) function for more documentation.
@@ -55,11 +55,11 @@ pub struct MotionFrame<'a, Kind> {
 }
 
 /// A motion frame type holding the raw pointer and derived metadata for an RS2 Accel frame.
-pub type AccelFrame<'a> = MotionFrame<'a, Accel>;
+pub type AccelFrame = MotionFrame<Accel>;
 /// A motion frame type holding the raw pointer and derived metadata for an RS2 Gyro frame.
-pub type GyroFrame<'a> = MotionFrame<'a, Gyro>;
+pub type GyroFrame = MotionFrame<Gyro>;
 
-impl<'a> FrameCategory for AccelFrame<'a> {
+impl FrameCategory for AccelFrame {
     fn extension() -> Rs2Extension {
         Rs2Extension::MotionFrame
     }
@@ -73,7 +73,7 @@ impl<'a> FrameCategory for AccelFrame<'a> {
     }
 }
 
-impl<'a> FrameCategory for GyroFrame<'a> {
+impl FrameCategory for GyroFrame {
     fn extension() -> Rs2Extension {
         Rs2Extension::MotionFrame
     }
@@ -87,7 +87,7 @@ impl<'a> FrameCategory for GyroFrame<'a> {
     }
 }
 
-impl<'a, K> Drop for MotionFrame<'a, K> {
+impl<K> Drop for MotionFrame<K> {
     /// Drop the raw pointer stored with this struct whenever it goes out of scope.
     fn drop(&mut self) {
         unsafe {
@@ -98,9 +98,9 @@ impl<'a, K> Drop for MotionFrame<'a, K> {
     }
 }
 
-unsafe impl<'a, K> Send for MotionFrame<'a, K> {}
+unsafe impl<K> Send for MotionFrame<K> {}
 
-impl<'a, K> TryFrom<NonNull<sys::rs2_frame>> for MotionFrame<'a, K> {
+impl<K> TryFrom<NonNull<sys::rs2_frame>> for MotionFrame<K> {
     type Error = anyhow::Error;
 
     /// Attempt to create an Image frame of extension K from the raw `rs2_frame`. All
@@ -162,8 +162,8 @@ impl<'a, K> TryFrom<NonNull<sys::rs2_frame>> for MotionFrame<'a, K> {
     }
 }
 
-impl<'a, K> FrameEx<'a> for MotionFrame<'a, K> {
-    fn stream_profile(&'a self) -> &'a StreamProfile<'a> {
+impl<K> FrameEx for MotionFrame<K> {
+    fn stream_profile(&self) -> &StreamProfile {
         &self.frame_stream_profile
     }
 
@@ -234,7 +234,7 @@ impl<'a, K> FrameEx<'a> for MotionFrame<'a, K> {
     }
 }
 
-impl<'a> AccelFrame<'a> {
+impl AccelFrame {
     /// Returns a 3-item array representing the sensor motion recorded in the Accel frame.
     ///
     /// Accelerations are reported as [x, y, z] values, and are in units of m/s^2
@@ -257,12 +257,12 @@ impl<'a> AccelFrame<'a> {
     /// Read more about the coordinate frames of RealSense motion in
     /// [the RealSense docs](https://www.intelrealsense.com/how-to-getting-imu-data-from-d435i-and-t265/)
     ///
-    pub fn acceleration(&'a self) -> &'a [f32; 3] {
+    pub fn acceleration(&self) -> &[f32; 3] {
         &self.motion
     }
 }
 
-impl<'a> GyroFrame<'a> {
+impl GyroFrame {
     /// Returns a 3-item array representing the sensor motion recorded in the Gyro frame.
     ///
     /// Gyroscope measurements are reported as [x, y, z] values, and are in units of radians/s
@@ -285,7 +285,7 @@ impl<'a> GyroFrame<'a> {
     /// Read more about the coordinate frames of RealSense motion in
     /// [the RealSense docs](https://www.intelrealsense.com/how-to-getting-imu-data-from-d435i-and-t265/)
     ///
-    pub fn rotational_velocity(&'a self) -> &'a [f32; 3] {
+    pub fn rotational_velocity(&self) -> &[f32; 3] {
         &self.motion
     }
 }

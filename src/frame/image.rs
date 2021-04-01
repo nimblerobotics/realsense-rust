@@ -54,7 +54,7 @@ pub struct Confidence;
 /// This generic type isn't particularly useful on it's own. In all cases, you want a specialized
 /// version of this class ([`DepthFrame`], [`ColorFrame`], [`DisparityFrame`]).
 #[derive(Debug)]
-pub struct ImageFrame<'a, Kind> {
+pub struct ImageFrame<Kind> {
     /// The raw data pointer from the original rs2 frame.
     frame_ptr: NonNull<sys::rs2_frame>,
     /// The width of the frame in pixels.
@@ -70,11 +70,11 @@ pub struct ImageFrame<'a, Kind> {
     /// The RealSense time domain from which the timestamp is derived.
     timestamp_domain: Rs2TimestampDomain,
     /// The Stream Profile that created the frame.
-    frame_stream_profile: StreamProfile<'a>,
+    frame_stream_profile: StreamProfile,
     /// The size in bytes of the data contained in the frame.
     data_size_in_bytes: usize,
     /// The frame data contained in the frame.
-    data: &'a std::os::raw::c_void,
+    data: NonNull<std::os::raw::c_void>,
     /// A boolean used during `Drop` calls. This allows for proper handling of the pointer
     /// during ownership transfer.
     should_drop: bool,
@@ -83,7 +83,7 @@ pub struct ImageFrame<'a, Kind> {
 }
 
 pub struct Iter<'a, K> {
-    pub(crate) frame: &'a ImageFrame<'a, K>,
+    pub(crate) frame: &'a ImageFrame<K>,
     pub(crate) column: usize,
     pub(crate) row: usize,
 }
@@ -114,39 +114,39 @@ impl<'a, K> Iterator for Iter<'a, K> {
 /// All fields in this struct are initialized during struct creation (via `try_from`).
 /// Everything called from here during runtime should be valid as long as the
 /// Frame is in scope... like normal Rust.
-pub type DepthFrame<'a> = ImageFrame<'a, Depth>;
+pub type DepthFrame = ImageFrame<Depth>;
 /// An ImageFrame type holding the raw pointer and derived metadata for an RS2 Disparity frame.
 ///
 /// All fields in this struct are initialized during struct creation (via `try_from`).
 /// Everything called from here during runtime should be valid as long as the
 /// Frame is in scope... like normal Rust.
-pub type DisparityFrame<'a> = ImageFrame<'a, Disparity>;
+pub type DisparityFrame = ImageFrame<Disparity>;
 /// An ImageFrame type holding the raw pointer and derived metadata for an RS2 Color frame.
 ///
 /// All fields in this struct are initialized during struct creation (via `try_from`).
 /// Everything called from here during runtime should be valid as long as the
 /// Frame is in scope... like normal Rust.
-pub type ColorFrame<'a> = ImageFrame<'a, Color>;
+pub type ColorFrame = ImageFrame<Color>;
 /// An ImageFrame type holding the raw pointer and derived metadata for an RS2 Infrared frame.
 ///
 /// All fields in this struct are initialized during struct creation (via `try_from`).
 /// Everything called from here during runtime should be valid as long as the
 /// Frame is in scope... like normal Rust.
-pub type InfraredFrame<'a> = ImageFrame<'a, Infrared>;
+pub type InfraredFrame = ImageFrame<Infrared>;
 /// An ImageFrame type holding the raw pointer and derived metadata for an RS2 Fisheye frame.
 ///
 /// All fields in this struct are initialized during struct creation (via `try_from`).
 /// Everything called from here during runtime should be valid as long as the
 /// Frame is in scope... like normal Rust.
-pub type FisheyeFrame<'a> = ImageFrame<'a, Fisheye>;
+pub type FisheyeFrame = ImageFrame<Fisheye>;
 /// An ImageFrame type holding the raw pointer and derived metadata for an RS2 Confidence frame.
 ///
 /// All fields in this struct are initialized during struct creation (via `try_from`).
 /// Everything called from here during runtime should be valid as long as the
 /// Frame is in scope... like normal Rust.
-pub type ConfidenceFrame<'a> = ImageFrame<'a, Confidence>;
+pub type ConfidenceFrame = ImageFrame<Confidence>;
 
-impl<'a, K> Drop for ImageFrame<'a, K> {
+impl<K> Drop for ImageFrame<K> {
     fn drop(&mut self) {
         unsafe {
             if self.should_drop {
@@ -156,7 +156,7 @@ impl<'a, K> Drop for ImageFrame<'a, K> {
     }
 }
 
-impl<'a, K> IntoIterator for &'a ImageFrame<'a, K> {
+impl<'a, K> IntoIterator for &'a ImageFrame<K> {
     type Item = <Iter<'a, K> as Iterator>::Item;
     type IntoIter = Iter<'a, K>;
 
@@ -165,9 +165,9 @@ impl<'a, K> IntoIterator for &'a ImageFrame<'a, K> {
     }
 }
 
-unsafe impl<'a, K> Send for ImageFrame<'a, K> {}
+unsafe impl<K> Send for ImageFrame<K> {}
 
-impl<'a, K> TryFrom<NonNull<sys::rs2_frame>> for ImageFrame<'a, K> {
+impl<K> TryFrom<NonNull<sys::rs2_frame>> for ImageFrame<K> {
     type Error = anyhow::Error;
 
     /// Attempt to construct an Image frame of extension K from the raw `rs2_frame`.
@@ -225,8 +225,10 @@ impl<'a, K> TryFrom<NonNull<sys::rs2_frame>> for ImageFrame<'a, K> {
 
             debug_assert_eq!(size, width * height * bits_per_pixel / BITS_PER_BYTE);
 
-            let ptr = sys::rs2_get_frame_data(frame_ptr.as_ptr(), &mut err);
+            let data_ptr = sys::rs2_get_frame_data(frame_ptr.as_ptr(), &mut err);
             check_rs2_error!(err, FrameConstructionError::CouldNotGetData)?;
+
+            let nonnull_data_ptr = NonNull::new(data_ptr as *mut std::os::raw::c_void).unwrap();
 
             Ok(ImageFrame {
                 frame_ptr,
@@ -238,7 +240,7 @@ impl<'a, K> TryFrom<NonNull<sys::rs2_frame>> for ImageFrame<'a, K> {
                 timestamp_domain: Rs2TimestampDomain::from_i32(timestamp_domain as i32).unwrap(),
                 frame_stream_profile: profile,
                 data_size_in_bytes: size as usize,
-                data: ptr.as_ref().unwrap(),
+                data: nonnull_data_ptr,
                 should_drop: true,
                 _phantom: PhantomData::<K> {},
             })
@@ -246,7 +248,7 @@ impl<'a, K> TryFrom<NonNull<sys::rs2_frame>> for ImageFrame<'a, K> {
     }
 }
 
-impl<'a> FrameCategory for DepthFrame<'a> {
+impl FrameCategory for DepthFrame {
     fn extension() -> Rs2Extension {
         Rs2Extension::DepthFrame
     }
@@ -260,7 +262,7 @@ impl<'a> FrameCategory for DepthFrame<'a> {
     }
 }
 
-impl<'a> FrameCategory for DisparityFrame<'a> {
+impl FrameCategory for DisparityFrame {
     fn extension() -> Rs2Extension {
         Rs2Extension::DisparityFrame
     }
@@ -274,7 +276,7 @@ impl<'a> FrameCategory for DisparityFrame<'a> {
     }
 }
 
-impl<'a> FrameCategory for ColorFrame<'a> {
+impl FrameCategory for ColorFrame {
     fn extension() -> Rs2Extension {
         Rs2Extension::VideoFrame
     }
@@ -288,7 +290,7 @@ impl<'a> FrameCategory for ColorFrame<'a> {
     }
 }
 
-impl<'a> FrameCategory for InfraredFrame<'a> {
+impl FrameCategory for InfraredFrame {
     fn extension() -> Rs2Extension {
         Rs2Extension::VideoFrame
     }
@@ -302,7 +304,7 @@ impl<'a> FrameCategory for InfraredFrame<'a> {
     }
 }
 
-impl<'a> FrameCategory for FisheyeFrame<'a> {
+impl FrameCategory for FisheyeFrame {
     fn extension() -> Rs2Extension {
         Rs2Extension::VideoFrame
     }
@@ -316,7 +318,7 @@ impl<'a> FrameCategory for FisheyeFrame<'a> {
     }
 }
 
-impl<'a> FrameCategory for ConfidenceFrame<'a> {
+impl FrameCategory for ConfidenceFrame {
     fn extension() -> Rs2Extension {
         Rs2Extension::VideoFrame
     }
@@ -330,8 +332,8 @@ impl<'a> FrameCategory for ConfidenceFrame<'a> {
     }
 }
 
-impl<'a, T> FrameEx<'a> for ImageFrame<'a, T> {
-    fn stream_profile(&'a self) -> &'a StreamProfile<'a> {
+impl<T> FrameEx for ImageFrame<T> {
+    fn stream_profile(&self) -> &StreamProfile {
         &self.frame_stream_profile
     }
 
@@ -404,7 +406,7 @@ impl<'a, T> FrameEx<'a> for ImageFrame<'a, T> {
     }
 }
 
-impl<'a> DepthFrame<'a> {
+impl DepthFrame {
     /// Given the 2D depth coordinate (x,y) provide the corresponding depth in metric units.
     ///
     /// # Warning
@@ -437,7 +439,7 @@ impl<'a> DepthFrame<'a> {
     }
 }
 
-impl<'a> DisparityFrame<'a> {
+impl DisparityFrame {
     /// Given the 2D depth coordinate (x,y) provide the corresponding depth in metric units.
     ///
     /// # Warning
@@ -484,9 +486,9 @@ impl<'a> DisparityFrame<'a> {
     }
 }
 
-impl<'a, K> ImageFrame<'a, K> {
+impl<K> ImageFrame<K> {
     /// Iterator through every [pixel](crate::frame::PixelKind) of an image frame.
-    pub fn iter(&'a self) -> Iter<'a, K> {
+    pub fn iter(&self) -> Iter<'_, K> {
         Iter {
             frame: self,
             column: 0,
@@ -501,12 +503,12 @@ impl<'a, K> ImageFrame<'a, K> {
     /// This makes a call directly to the underlying data pointer inherited from
     /// the `rs2_frame`.
     #[inline(always)]
-    pub fn get_unchecked(&'a self, col: usize, row: usize) -> PixelKind<'a> {
+    pub fn get_unchecked(&self, col: usize, row: usize) -> PixelKind<'_> {
         unsafe {
             get_pixel(
                 self.frame_stream_profile.format(),
                 self.data_size_in_bytes,
-                self.data,
+                self.data.as_ptr(),
                 self.stride,
                 col,
                 row,
@@ -530,8 +532,16 @@ impl<'a, K> ImageFrame<'a, K> {
     }
 
     /// Get a reference to the raw data held by this Video frame.
-    pub fn get_data(&'a self) -> &'a std::os::raw::c_void {
-        self.data
+    ///
+    /// # Safety
+    ///
+    /// This is a raw pointer to the underlying data. This data has to be interpreted according to
+    /// the format of the frame itself. In most scenarios you will probably want to just use the
+    /// `get_unchecked` function associated with the [`FrameEx`](crate::fram::prelude::FrameEx)
+    /// trait, but this can be useful if you need more immediate access to the underlying pixel
+    /// data.
+    pub unsafe fn get_data(&self) -> &std::os::raw::c_void {
+        self.data.as_ref()
     }
 
     /// Get the width of this Video frame in pixels
@@ -545,7 +555,7 @@ impl<'a, K> ImageFrame<'a, K> {
     }
 
     /// Given a row and column index, Get a pixel value from this frame.
-    pub fn get(&'a self, col: usize, row: usize) -> Option<PixelKind<'a>> {
+    pub fn get(&self, col: usize, row: usize) -> Option<PixelKind<'_>> {
         if col >= self.width || row >= self.height {
             None
         } else {

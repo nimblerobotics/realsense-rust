@@ -74,7 +74,7 @@ impl InactivePipeline {
     /// Start the pipeline with an optional config.
     ///
     /// The method consumes inactive pipeline itself, and returns the started pipeine.
-    pub fn start(self, config: Option<Config>) -> Result<ActivePipeline<'static>> {
+    pub fn start(self, config: Option<Config>) -> Result<ActivePipeline> {
         unsafe {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
             let profile_ptr = if let Some(conf) = config {

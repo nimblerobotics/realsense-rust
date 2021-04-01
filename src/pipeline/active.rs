@@ -23,12 +23,12 @@ pub enum FrameWaitError {
 
 /// Type representing an "active" pipeline which is configured and can acquire frames.
 #[derive(Debug)]
-pub struct ActivePipeline<'a> {
+pub struct ActivePipeline {
     pipeline_ptr: NonNull<sys::rs2_pipeline>,
-    profile: PipelineProfile<'a>,
+    profile: PipelineProfile,
 }
 
-impl<'a> Drop for ActivePipeline<'a> {
+impl Drop for ActivePipeline {
     fn drop(&mut self) {
         unsafe {
             sys::rs2_delete_pipeline(self.pipeline_ptr.as_ptr());
@@ -36,16 +36,13 @@ impl<'a> Drop for ActivePipeline<'a> {
     }
 }
 
-unsafe impl<'a> Send for ActivePipeline<'a> {}
+unsafe impl Send for ActivePipeline {}
 
-impl<'a> ActivePipeline<'a> {
+impl ActivePipeline {
     /// Constructs a new active pipeline from the constituent components
     ///
     /// This is only to be used / called from the [`InactivePipeline`] type.
-    pub(crate) fn new(
-        pipeline_ptr: NonNull<sys::rs2_pipeline>,
-        profile: PipelineProfile<'a>,
-    ) -> Self {
+    pub(crate) fn new(pipeline_ptr: NonNull<sys::rs2_pipeline>, profile: PipelineProfile) -> Self {
         Self {
             pipeline_ptr,
             profile,
@@ -53,7 +50,7 @@ impl<'a> ActivePipeline<'a> {
     }
 
     /// Gets the active profile of pipeline.
-    pub fn profile(&'a self) -> &'a PipelineProfile<'a> {
+    pub fn profile(&self) -> &PipelineProfile {
         &self.profile
     }
 

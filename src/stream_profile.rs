@@ -45,7 +45,7 @@ use crate::{
 use anyhow::Result;
 use num_traits::FromPrimitive;
 use realsense_sys as sys;
-use std::{convert::TryFrom, marker::PhantomData, mem::MaybeUninit, ptr::NonNull};
+use std::{convert::TryFrom, mem::MaybeUninit, ptr::NonNull};
 use thiserror::Error;
 
 /// Type describing errors that can occur when trying to construct a stream profile.
@@ -66,6 +66,9 @@ pub enum StreamConstructionError {
     /// Usually due to an internal exception of some kind.
     #[error("Could not get the stream profile from a stream profile list. Type: {0}; Reason: {1}")]
     CouldNotGetProfileFromList(Rs2Exception, String),
+    /// Could not clone the stream profile after acquiring it from the profile list.
+    #[error("Could not clone the stream profile after getting it from the profile list. Type: {0}; Reason: {1}")]
+    CouldNotCloneProfile(Rs2Exception, String),
 }
 
 /// Type describing errors in getting or setting stream-related data.
@@ -99,23 +102,26 @@ pub enum DataError {
 ///
 /// This type exists as a high-level wrapper around an underlying `rs2_stream_profile` pointer. On
 /// construction, we cache a copy of the stream data and also cache whether or not this stream
-/// profile is the default stream.
+/// profile is the default stream for a sensor.
 ///
 /// # Lifetimes
 ///
-/// Stream profiles are acquired one of two ways:
+/// Stream profiles are acquired one of three ways:
 ///
 /// 1. The stream profile list via the [`stream_profiles`](crate::sensor::Sensor::stream_profiles))
 ///    method on the [`Sensor`](crate::sensor::Sensor) type.
-/// 2. The frame-specific `frame_stream_profile` member via the Frame type.
+/// 2. The stream profile list via the
+///    [`streams`](crate::pipeline::profile::PipelineProfile::streams) associated function on the
+///    [`PipelineProfile`](crate::pipeline::profile::PipelineProfile) type.
+/// 3. The frame-specific `frame_stream_profile` member via the Frame type.
 ///
-/// Stream profiles do not outlive the parent object that you obtained them from. This is somewhat
-/// artificial because this lifetime is not enforced or even documented this way in the C bindings
-/// for librealsense2, however this is a useful feature so as to encourage always grabbing the
-/// latest stream profile from the correct source.
+/// Stream profiles from the sensor can outlive the parent object that you obtain them from. In
+/// cases two and three above we return references to a stream profile owned by that type, so they
+/// may not.  In most cases you will probably want to grab the stream profile from the pipeline
+/// profile, which will give you all streams that are actively streaming from a given pipeline.
 ///
 #[derive(Debug)]
-pub struct StreamProfile<'a> {
+pub struct StreamProfile {
     // Underlying non-null pointer from realsense-sys.
     //
     // Unlike many other pointer types that we get from the ffi boundary, this pointer should not
@@ -141,21 +147,11 @@ pub struct StreamProfile<'a> {
     framerate: i32,
     // Whether or not the stream is a default stream.
     is_default: bool,
-    // This phantom reference to a null tuple is required to enforce the lifetime of the entire
-    // struct. The purpose of this is to ensure that stream profiles do not outlive their parent
-    // components.
-    //
-    // This is necessary because whether or not you get your profile from the sensor or an
-    // individual frame, you cannot guarantee that this data will necessarily be valid beyond the
-    // lifespan of that frame / sensor (because the frame / sensor own the stream profile in the
-    // underlying C++ API).
-    //
-    // This is more or less just a means to prevent users from violating ownership / lifetime
-    // semantics across the FFI boundary.
-    _phantom: PhantomData<&'a ()>,
+    // Whether or not to drop the profile
+    should_drop: bool,
 }
 
-impl<'a> TryFrom<NonNull<sys::rs2_stream_profile>> for StreamProfile<'a> {
+impl TryFrom<NonNull<sys::rs2_stream_profile>> for StreamProfile {
     type Error = StreamConstructionError;
 
     /// Attempt to create a stream profile from a pointer to an `rs2_stream_profile` type.
@@ -202,13 +198,23 @@ impl<'a> TryFrom<NonNull<sys::rs2_stream_profile>> for StreamProfile<'a> {
                 unique_id: unique_id.assume_init(),
                 framerate: framerate.assume_init(),
                 is_default: is_default != 0,
-                _phantom: PhantomData {},
+                should_drop: false,
             })
         }
     }
 }
 
-impl<'a> StreamProfile<'a> {
+impl Drop for StreamProfile {
+    fn drop(&mut self) {
+        unsafe {
+            if self.should_drop {
+                sys::rs2_delete_stream_profile(self.ptr.as_ptr());
+            }
+        }
+    }
+}
+
+impl StreamProfile {
     /// Attempt to construct a stream profile from a profile list and index.
     ///
     /// Constructs a new stream profile from the list and index, or returns an error.
@@ -234,9 +240,38 @@ impl<'a> StreamProfile<'a> {
             let profile_ptr = sys::rs2_get_stream_profile(profiles.as_ptr(), index, &mut err);
             check_rs2_error!(err, StreamConstructionError::CouldNotGetProfileFromList)?;
 
+            let mut stream = MaybeUninit::uninit();
+            let mut format = MaybeUninit::uninit();
+            let mut index = MaybeUninit::uninit();
+            let mut unique_id = MaybeUninit::uninit();
+            let mut framerate = MaybeUninit::uninit();
+
+            sys::rs2_get_stream_profile_data(
+                profile_ptr,
+                stream.as_mut_ptr(),
+                format.as_mut_ptr(),
+                index.as_mut_ptr(),
+                unique_id.as_mut_ptr(),
+                framerate.as_mut_ptr(),
+                &mut err,
+            );
+            check_rs2_error!(err, StreamConstructionError::CouldNotRetrieveStreamData)?;
+
+            let profile_ptr = sys::rs2_clone_stream_profile(
+                profile_ptr,
+                stream.assume_init(),
+                index.assume_init(),
+                format.assume_init(),
+                &mut err,
+            );
+            check_rs2_error!(err, StreamConstructionError::CouldNotCloneProfile)?;
+
             let nonnull_profile_ptr =
                 NonNull::new(profile_ptr as *mut sys::rs2_stream_profile).unwrap();
-            Ok(Self::try_from(nonnull_profile_ptr)?)
+            let mut stream_profile = Self::try_from(nonnull_profile_ptr)?;
+            stream_profile.should_drop = true;
+
+            Ok(stream_profile)
         }
     }
 

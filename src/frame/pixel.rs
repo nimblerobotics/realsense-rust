@@ -56,16 +56,14 @@ pub enum PixelKind<'a> {
 /// This method should only be called from the ImageFrame types themselves, as this
 /// is the only place where proper pointer management happens.
 #[inline]
-pub(crate) unsafe fn get_pixel(
+pub(crate) unsafe fn get_pixel<'a>(
     format: Rs2Format,
     data_size_in_bytes: usize,
-    data: &c_void,
+    data: *const c_void,
     stride_in_bytes: usize,
     col: usize,
     row: usize,
-) -> PixelKind {
-    let data_as_ptr = data as *const std::os::raw::c_void;
-
+) -> PixelKind<'a> {
     // Realsense stores frame data in row-major format. Normally, we would offset into a
     // uniform array in column major format with the following equation:
     //
@@ -90,7 +88,7 @@ pub(crate) unsafe fn get_pixel(
         // NOTE: Order matters because we are taking advantage of integer division here.
         //
         Rs2Format::Yuyv => {
-            let slice = slice::from_raw_parts(data_as_ptr.cast::<u8>(), data_size_in_bytes);
+            let slice = slice::from_raw_parts(data.cast::<u8>(), data_size_in_bytes);
             let offset = (row * stride_in_bytes) + (col / 2) * 4;
 
             let y = if row % 2 == 0 {
@@ -109,7 +107,7 @@ pub(crate) unsafe fn get_pixel(
         // re-ordering of the underlying data.
         //
         Rs2Format::Uyvy => {
-            let slice = slice::from_raw_parts(data_as_ptr.cast::<u8>(), data_size_in_bytes);
+            let slice = slice::from_raw_parts(data.cast::<u8>(), data_size_in_bytes);
             let offset = (row * stride_in_bytes) + (col / 2) * 4;
 
             let y = if row % 2 == 0 {
@@ -128,7 +126,7 @@ pub(crate) unsafe fn get_pixel(
         // are with YUYV / UYVY, the multipliers for column and row offsets can be uniform.
         //
         Rs2Format::Bgr8 => {
-            let slice = slice::from_raw_parts(data_as_ptr.cast::<u8>(), data_size_in_bytes);
+            let slice = slice::from_raw_parts(data.cast::<u8>(), data_size_in_bytes);
             let offset = (row * stride_in_bytes) + (col * 3);
 
             PixelKind::Bgr8 {
@@ -140,7 +138,7 @@ pub(crate) unsafe fn get_pixel(
         // BGRA8 is more or less the same as BGR8, except we use 4 as a multiplier.
         //
         Rs2Format::Bgra8 => {
-            let slice = slice::from_raw_parts(data_as_ptr.cast::<u8>(), data_size_in_bytes);
+            let slice = slice::from_raw_parts(data.cast::<u8>(), data_size_in_bytes);
             let offset = (row * stride_in_bytes) + (col * 4);
 
             PixelKind::Bgra8 {
@@ -153,7 +151,7 @@ pub(crate) unsafe fn get_pixel(
         // RGB8 is the same as BGR8, the order is just different.
         //
         Rs2Format::Rgb8 => {
-            let slice = slice::from_raw_parts(data_as_ptr.cast::<u8>(), data_size_in_bytes);
+            let slice = slice::from_raw_parts(data.cast::<u8>(), data_size_in_bytes);
             let offset = (row * stride_in_bytes) + (col * 3);
 
             PixelKind::Bgr8 {
@@ -165,7 +163,7 @@ pub(crate) unsafe fn get_pixel(
         // RGBA8 is the same as BGRA8, the order is just different.
         //
         Rs2Format::Rgba8 => {
-            let slice = slice::from_raw_parts(data_as_ptr.cast::<u8>(), data_size_in_bytes);
+            let slice = slice::from_raw_parts(data.cast::<u8>(), data_size_in_bytes);
             let offset = (row * stride_in_bytes) + (col * 4);
 
             PixelKind::Bgra8 {
@@ -176,7 +174,7 @@ pub(crate) unsafe fn get_pixel(
             }
         }
         Rs2Format::Raw8 => {
-            let slice = slice::from_raw_parts(data_as_ptr.cast::<u8>(), data_size_in_bytes);
+            let slice = slice::from_raw_parts(data.cast::<u8>(), data_size_in_bytes);
             let offset = (row * stride_in_bytes) + col;
 
             PixelKind::Raw8 {
@@ -184,7 +182,7 @@ pub(crate) unsafe fn get_pixel(
             }
         }
         Rs2Format::Y8 => {
-            let slice = slice::from_raw_parts(data_as_ptr.cast::<u8>(), data_size_in_bytes);
+            let slice = slice::from_raw_parts(data.cast::<u8>(), data_size_in_bytes);
             let offset = (row * stride_in_bytes) + col;
 
             PixelKind::Y8 {
@@ -194,7 +192,7 @@ pub(crate) unsafe fn get_pixel(
         Rs2Format::Y16 => {
             let size = data_size_in_bytes / std::mem::size_of::<u16>();
             let stride = stride_in_bytes / std::mem::size_of::<u16>();
-            let slice = slice::from_raw_parts(data_as_ptr.cast::<u16>(), size);
+            let slice = slice::from_raw_parts(data.cast::<u16>(), size);
             let offset = (row * stride) + col;
 
             PixelKind::Y16 {
@@ -204,7 +202,7 @@ pub(crate) unsafe fn get_pixel(
         Rs2Format::Z16 => {
             let size = data_size_in_bytes / std::mem::size_of::<u16>();
             let stride = stride_in_bytes / std::mem::size_of::<u16>();
-            let slice = slice::from_raw_parts(data_as_ptr.cast::<u16>(), size);
+            let slice = slice::from_raw_parts(data.cast::<u16>(), size);
             let offset = (row * stride) + col;
 
             PixelKind::Z16 {
@@ -214,7 +212,7 @@ pub(crate) unsafe fn get_pixel(
         Rs2Format::Distance => {
             let size = data_size_in_bytes / std::mem::size_of::<f32>();
             let stride = stride_in_bytes / std::mem::size_of::<f32>();
-            let slice = slice::from_raw_parts(data_as_ptr.cast::<f32>(), size);
+            let slice = slice::from_raw_parts(data.cast::<f32>(), size);
             let offset = (row * stride) + col;
 
             PixelKind::Distance {
@@ -224,7 +222,7 @@ pub(crate) unsafe fn get_pixel(
         Rs2Format::Disparity32 => {
             let size = data_size_in_bytes / std::mem::size_of::<f32>();
             let stride = stride_in_bytes / std::mem::size_of::<f32>();
-            let slice = slice::from_raw_parts(data_as_ptr.cast::<f32>(), size);
+            let slice = slice::from_raw_parts(data.cast::<f32>(), size);
             let offset = (row * stride) + col;
 
             PixelKind::Disparity32 {
@@ -234,7 +232,7 @@ pub(crate) unsafe fn get_pixel(
         Rs2Format::Xyz32F => {
             let size = data_size_in_bytes / std::mem::size_of::<f32>();
             let stride = stride_in_bytes / std::mem::size_of::<f32>();
-            let slice = slice::from_raw_parts(data_as_ptr.cast::<f32>(), size);
+            let slice = slice::from_raw_parts(data.cast::<f32>(), size);
             let offset = (row * stride) + col;
 
             PixelKind::Xyz32f {

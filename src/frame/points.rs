@@ -24,7 +24,7 @@ use std::{
 /// Everything called from here during runtime should be valid as long as the
 /// Frame is in scope... like normal Rust.
 #[derive(Debug)]
-pub struct PointsFrame<'a> {
+pub struct PointsFrame {
     /// The raw data pointer from the original rs2 frame.
     frame_ptr: NonNull<sys::rs2_frame>,
     /// The timestamp of the frame.
@@ -32,7 +32,7 @@ pub struct PointsFrame<'a> {
     /// The RealSense time domain from which the timestamp is derived.
     timestamp_domain: Rs2TimestampDomain,
     /// The Stream Profile that created the frame.
-    frame_stream_profile: StreamProfile<'a>,
+    frame_stream_profile: StreamProfile,
     /// The number of points represented in the Points frame.
     num_points: usize,
     /// The raw pointer to the vertex data.
@@ -44,7 +44,7 @@ pub struct PointsFrame<'a> {
     should_drop: bool,
 }
 
-impl<'a> FrameCategory for PointsFrame<'a> {
+impl FrameCategory for PointsFrame {
     fn extension() -> Rs2Extension {
         Rs2Extension::Points
     }
@@ -58,8 +58,8 @@ impl<'a> FrameCategory for PointsFrame<'a> {
     }
 }
 
-impl<'a> FrameEx<'a> for PointsFrame<'a> {
-    fn stream_profile(&'a self) -> &'a StreamProfile<'a> {
+impl FrameEx for PointsFrame {
+    fn stream_profile(&self) -> &StreamProfile {
         &self.frame_stream_profile
     }
 
@@ -132,7 +132,7 @@ impl<'a> FrameEx<'a> for PointsFrame<'a> {
     }
 }
 
-impl<'a> Drop for PointsFrame<'a> {
+impl Drop for PointsFrame {
     /// Drop the raw pointer stored with this struct whenever it goes out of scope.
     fn drop(&mut self) {
         unsafe {
@@ -145,9 +145,9 @@ impl<'a> Drop for PointsFrame<'a> {
     }
 }
 
-unsafe impl<'a> Send for PointsFrame<'a> {}
+unsafe impl Send for PointsFrame {}
 
-impl<'a> std::convert::TryFrom<NonNull<sys::rs2_frame>> for PointsFrame<'a> {
+impl std::convert::TryFrom<NonNull<sys::rs2_frame>> for PointsFrame {
     type Error = anyhow::Error;
 
     /// Attempt to construct a points frame from a raw pointer to `rs2_frame`
@@ -208,9 +208,9 @@ impl<'a> std::convert::TryFrom<NonNull<sys::rs2_frame>> for PointsFrame<'a> {
     }
 }
 
-impl<'a> PointsFrame<'a> {
+impl PointsFrame {
     /// Gets vertices of the point cloud.
-    pub fn vertices(&'a self) -> &'a [sys::rs2_vertex] {
+    pub fn vertices(&self) -> &[sys::rs2_vertex] {
         unsafe {
             slice::from_raw_parts::<sys::rs2_vertex>(
                 self.vertices_data_ptr.as_ptr(),
@@ -228,7 +228,7 @@ impl<'a> PointsFrame<'a> {
     /// `[[c_int; 2]; N]` as `[[c_float; 2]; N]` values.  Note that C does not generally guarantee
     /// that `sizeof(int) == sizeof(float)`.
     ///
-    pub fn texture_coordinates(&'a self) -> &'a [[f32; 2]] {
+    pub fn texture_coordinates(&self) -> &[[f32; 2]] {
         unsafe {
             slice::from_raw_parts::<[f32; 2]>(
                 self.texture_data_ptr.as_ptr().cast::<[f32; 2]>(),
