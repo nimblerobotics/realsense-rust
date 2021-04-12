@@ -32,7 +32,7 @@ pub enum Rs2Exception {
     /// or configured. E.g. this type of error can occur if you try to wait for frames on a
     /// pipeline before it is started. We attempt to reduce the number of opportunities where this
     /// can happen by structuring the types around these constraints at a higher level.
-    WrongAPICallSequence =
+    WrongApiCallSequence =
         sys::rs2_exception_type_RS2_EXCEPTION_TYPE_WRONG_API_CALL_SEQUENCE as i32,
     /// The method you tried to call is not implemented.
     NotImplemented = sys::rs2_exception_type_RS2_EXCEPTION_TYPE_NOT_IMPLEMENTED as i32,
@@ -55,7 +55,7 @@ impl Display for Rs2Exception {
             Rs2Exception::CameraDisconnected => "CameraDisconnected",
             Rs2Exception::Backend => "Backend",
             Rs2Exception::InvalidValue => "InvalidValue",
-            Rs2Exception::WrongAPICallSequence => "WrongAPICallSequence",
+            Rs2Exception::WrongApiCallSequence => "WrongAPICallSequence",
             Rs2Exception::NotImplemented => "NotImplemented",
             Rs2Exception::DeviceInRecoveryMode => "DeviceInRecoveryMode",
             Rs2Exception::IoDeviceFailure => "IODeviceFailure",

@@ -34,7 +34,7 @@ pub enum Rs2ProductLine {
     /// Any D400 series camera
     D400 = sys::RS2_PRODUCT_LINE_D400,
     /// Any SR300 series camera
-    SR300 = sys::RS2_PRODUCT_LINE_SR300,
+    Sr300 = sys::RS2_PRODUCT_LINE_SR300,
     /// Any L500 series LiDAR / camera
     L500 = sys::RS2_PRODUCT_LINE_L500,
     /// Any T200 series product

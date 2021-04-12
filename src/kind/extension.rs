@@ -68,6 +68,7 @@ use realsense_sys as sys;
 /// * [`Rs2Extension::SoftwareDevice`]
 /// * [`Rs2Extension::UpdateDevice`]
 /// * [`Rs2Extension::AutoCalibratedDevice`]
+/// * [`Rs2Extension::CalibrationChangeDevice`]
 ///
 /// # Miscellaneous extensions:
 ///
@@ -130,6 +131,7 @@ pub enum Rs2Extension {
     SoftwareDevice = sys::rs2_extension_RS2_EXTENSION_SOFTWARE_DEVICE as i32,
     UpdateDevice = sys::rs2_extension_RS2_EXTENSION_UPDATE_DEVICE as i32,
     AutoCalibratedDevice = sys::rs2_extension_RS2_EXTENSION_AUTO_CALIBRATED_DEVICE as i32,
+    CalibrationChangeDevice = sys::rs2_extension_RS2_EXTENSION_CALIBRATION_CHANGE_DEVICE as i32,
     // misc
     AdvancedMode = sys::rs2_extension_RS2_EXTENSION_ADVANCED_MODE as i32,
     Record = sys::rs2_extension_RS2_EXTENSION_RECORD as i32,
@@ -199,10 +201,11 @@ pub const PROFILE_EXTENSIONS: [Rs2Extension; 3] = [
     Rs2Extension::PoseProfile,
 ];
 
-pub const DEVICE_EXTENSIONS: [Rs2Extension; 3] = [
+pub const DEVICE_EXTENSIONS: [Rs2Extension; 4] = [
     Rs2Extension::SoftwareDevice,
     Rs2Extension::UpdateDevice,
     Rs2Extension::AutoCalibratedDevice,
+    Rs2Extension::CalibrationChangeDevice,
 ];
 
 pub const MISC_EXTENSIONS: [Rs2Extension; 15] = [

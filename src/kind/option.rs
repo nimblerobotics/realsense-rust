@@ -242,7 +242,7 @@ pub enum Rs2Option {
     /// and stability if the host machine is relatively weak compared to the workload.
     HostPerformance = sys::rs2_option_RS2_OPTION_HOST_PERFORMANCE as i32,
     /// Enable/disable HDR.
-    HDREnabled = sys::rs2_option_RS2_OPTION_HDR_ENABLED as i32,
+    HdrEnabled = sys::rs2_option_RS2_OPTION_HDR_ENABLED as i32,
     /// Get HDR Sequence name.
     SequenceName = sys::rs2_option_RS2_OPTION_SEQUENCE_NAME as i32,
     /// Get HDR Sequence size.
@@ -254,11 +254,11 @@ pub enum Rs2Option {
     /// Enable/disable the maximum usable depth sensor range given the amount of ambient light in the scene.
     EnableMaxUsableRange = sys::rs2_option_RS2_OPTION_ENABLE_MAX_USABLE_RANGE as i32,
     /// Enable/disable the alternate IR, When enabling alternate IR, the IR image is holding the amplitude of the depth correlation.
-    AlternateIR = sys::rs2_option_RS2_OPTION_ALTERNATE_IR as i32,
+    AlternateIr = sys::rs2_option_RS2_OPTION_ALTERNATE_IR as i32,
     /// Get an estimation of the noise on the IR image.
     NoiseEstimation = sys::rs2_option_RS2_OPTION_NOISE_ESTIMATION as i32,
     /// Enable/disable data collection for calculating IR pixel reflectivity.
-    EnableIRReflectivity = sys::rs2_option_RS2_OPTION_ENABLE_IR_REFLECTIVITY as i32,
+    EnableIrReflectivity = sys::rs2_option_RS2_OPTION_ENABLE_IR_REFLECTIVITY as i32,
     /// Auto exposure limit in microseconds.
     ///
     /// Default is 0 which means full exposure range. If the requested exposure limit is greater

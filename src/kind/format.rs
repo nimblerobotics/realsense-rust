@@ -107,7 +107,7 @@ pub enum Rs2Format {
     /// Variable-length Huffman-compressed 16-bit depth values
     Z16H = sys::rs2_format_RS2_FORMAT_Z16H as i32,
     /// 16-bit per pixel frame grabber format
-    FG = sys::rs2_format_RS2_FORMAT_FG as i32,
+    Fg = sys::rs2_format_RS2_FORMAT_FG as i32,
     // Not included since this just tells us the total number of formats
     //
     // Count = sys::rs2_format_RS2_FORMAT_COUNT,

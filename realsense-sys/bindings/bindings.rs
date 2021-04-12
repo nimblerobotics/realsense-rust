@@ -13,10 +13,10 @@ pub const RS2_UNSIGNED_UPDATE_MODE_UPDATE: u32 = 0;
 pub const RS2_UNSIGNED_UPDATE_MODE_READ_ONLY: u32 = 1;
 pub const RS2_UNSIGNED_UPDATE_MODE_FULL: u32 = 2;
 pub const RS2_API_MAJOR_VERSION: u32 = 2;
-pub const RS2_API_MINOR_VERSION: u32 = 42;
+pub const RS2_API_MINOR_VERSION: u32 = 44;
 pub const RS2_API_PATCH_VERSION: u32 = 0;
 pub const RS2_API_BUILD_VERSION: u32 = 0;
-pub const RS2_API_VERSION: u32 = 24200;
+pub const RS2_API_VERSION: u32 = 24400;
 pub const RS2_DEFAULT_TIMEOUT: u32 = 15000;
 #[doc = "< Frames didn't arrived within 5 seconds"]
 pub const rs2_notification_category_RS2_NOTIFICATION_CATEGORY_FRAMES_TIMEOUT:
@@ -836,7 +836,8 @@ pub const rs2_extension_RS2_EXTENSION_HDR_MERGE: rs2_extension = 51;
 pub const rs2_extension_RS2_EXTENSION_SEQUENCE_ID_FILTER: rs2_extension = 52;
 pub const rs2_extension_RS2_EXTENSION_MAX_USABLE_RANGE_SENSOR: rs2_extension = 53;
 pub const rs2_extension_RS2_EXTENSION_DEBUG_STREAM_SENSOR: rs2_extension = 54;
-pub const rs2_extension_RS2_EXTENSION_COUNT: rs2_extension = 55;
+pub const rs2_extension_RS2_EXTENSION_CALIBRATION_CHANGE_DEVICE: rs2_extension = 55;
+pub const rs2_extension_RS2_EXTENSION_COUNT: rs2_extension = 56;
 #[doc = " \\brief Specifies advanced interfaces (capabilities) objects may implement."]
 pub type rs2_extension = ::std::os::raw::c_uint;
 extern "C" {
@@ -2534,7 +2535,8 @@ extern "C" {
 }
 pub const rs2_calibration_type_RS2_CALIBRATION_AUTO_DEPTH_TO_RGB: rs2_calibration_type = 0;
 pub const rs2_calibration_type_RS2_CALIBRATION_MANUAL_DEPTH_TO_RGB: rs2_calibration_type = 1;
-pub const rs2_calibration_type_RS2_CALIBRATION_TYPE_COUNT: rs2_calibration_type = 2;
+pub const rs2_calibration_type_RS2_CALIBRATION_THERMAL: rs2_calibration_type = 2;
+pub const rs2_calibration_type_RS2_CALIBRATION_TYPE_COUNT: rs2_calibration_type = 3;
 #[doc = " Used in device_calibration; enumerates the different calibration types"]
 #[doc = " available for that extension."]
 pub type rs2_calibration_type = ::std::os::raw::c_uint;
@@ -2787,6 +2789,18 @@ extern "C" {
 extern "C" {
     pub fn rs2_frame_metadata_value_to_string(
         metadata: rs2_frame_metadata_value,
+    ) -> *const ::std::os::raw::c_char;
+}
+#[doc = "< Flat rectangle with vertices as the centers of Gaussian dots"]
+pub const rs2_calib_target_type_RS2_CALIB_TARGET_RECT_GAUSSIAN_DOT_VERTICES: rs2_calib_target_type =
+    0;
+#[doc = "< Number of enumeration values. Not a valid input: intended to be used in for-loops."]
+pub const rs2_calib_target_type_RS2_CALIB_TARGET_COUNT: rs2_calib_target_type = 1;
+#[doc = " \\brief Calibration target type."]
+pub type rs2_calib_target_type = ::std::os::raw::c_uint;
+extern "C" {
+    pub fn rs2_calib_target_type_to_string(
+        type_: rs2_calib_target_type,
     ) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
@@ -3122,6 +3136,19 @@ extern "C" {
     pub fn rs2_pose_frame_get_pose_data(
         frame: *const rs2_frame,
         pose: *mut rs2_pose,
+        error: *mut *mut rs2_error,
+    );
+}
+extern "C" {
+    #[doc = " Calculate the rectangle size on the specific target"]
+    #[doc = " \\param[in] frame         Left or right camera frame of size 256x144"]
+    #[doc = " \\param[out] rect_sides   The four rectangle side sizes in pixels with the order of top, bottom, left, and right"]
+    #[doc = " \\param[out] error        If non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
+    pub fn rs2_extract_target_dimensions(
+        frame: *const rs2_frame,
+        calib_type: rs2_calib_target_type,
+        target_dims: *mut f32,
+        target_dims_size: ::std::os::raw::c_uint,
         error: *mut *mut rs2_error,
     );
 }
