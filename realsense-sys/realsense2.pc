@@ -6,7 +6,7 @@ dlldir=${exec_prefix}/bin/x64
 
 Name:
 Description: Intel(R) RealSense(tm) Cross Platform API
-Version: 2.42.0
+Version: 2.44.0
 URL: https://github.com/IntelRealSense/librealsense
 Requires.private: 
 Libs: -L${libdir} -lrealsense2

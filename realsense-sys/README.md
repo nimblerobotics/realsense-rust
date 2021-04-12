@@ -6,7 +6,7 @@ realsense-rust if possible in order to better maintain Rust memory safety.
 
 Compatible with RealSense SDK v2.0 and up.
 
-**Default bindings are for librealsense version: 2.42.0**
+**Default bindings are for librealsense version: 2.44.0**
 
 ## Usage
 
@@ -42,7 +42,7 @@ the necessary headers and libraries.
 reformat the bindings for Windows platforms. 
 
 This installation process assumes that the RealSense SDK was installed through the .exe wizard downloadable from [the
-librealsense asset page](https://github.com/IntelRealSense/librealsense/releases/tag/v2.42.0). This process will install
+librealsense asset page](https://github.com/IntelRealSense/librealsense/releases/tag/v2.44.0). This process will install
 the SDK in `C:/Program Files (x86)/Intel RealSense SDK 2.0`. If your installation is in another place, modify the
 `prefix` line in [realsense2.pc](./realsense2.pc) to the right path. 
 
