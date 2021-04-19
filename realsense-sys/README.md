@@ -21,17 +21,25 @@ realsense-sys = "<current version number>"
 
 ## Regenerating the API Bindings
 
+Bindgen relies on clang to generate new FFI bindings. See the OS Use Notes below for more.
+
 *Non-Linux users*: The current bindings are formatted for Linux. Users on systems other than Linux must run with the
 `buildtime-bindgen` feature to reformat the bindings. See more notes for your platform below.
 
 *Backwards compatibility*: If you're using an older librealsense version, you may enable the `buildtime-bindgen` feature
 to re-generate the bindings. We make no claims of backwards compatibility; good luck.
 
-# OS Installation Notes
+With all of that said: Run the following to regenerate the realsense2 SDK bindings:
+
+```cargo run --features buildtime-bindgen```
+
+# OS Use Notes
 
 ## Linux
 
-No action needed. 
+You can install Clang using the following command:
+
+```sudo apt install libclang-dev clang```
 
 If the realsense2 SDK is installed, pkg-config will detect the [realsense2.pc](./realsense2.pc) config file automatically. This will load
 the necessary headers and libraries. 
