@@ -35,7 +35,6 @@
 //! identifier if they correspond to the same stream.
 //!
 //! See [the `StreamProfile` type](crate::stream_profile::StreamProfile) for more information.
-//!
 
 use crate::{
     base::{Rs2Extrinsics, Rs2Intrinsics, Rs2MotionDeviceIntrinsics},
@@ -111,15 +110,14 @@ pub enum DataError {
 /// 1. The stream profile list via the [`stream_profiles`](crate::sensor::Sensor::stream_profiles))
 ///    method on the [`Sensor`](crate::sensor::Sensor) type.
 /// 2. The stream profile list via the
-///    [`streams`](crate::pipeline::profile::PipelineProfile::streams) associated function on the
-///    [`PipelineProfile`](crate::pipeline::profile::PipelineProfile) type.
+///    [`streams`](crate::pipeline::PipelineProfile::streams) associated function on the
+///    [`PipelineProfile`](crate::pipeline::PipelineProfile) type.
 /// 3. The frame-specific `frame_stream_profile` member via the Frame type.
 ///
 /// Stream profiles from the sensor can outlive the parent object that you obtain them from. In
 /// cases two and three above we return references to a stream profile owned by that type, so they
 /// may not.  In most cases you will probably want to grab the stream profile from the pipeline
 /// profile, which will give you all streams that are actively streaming from a given pipeline.
-///
 #[derive(Debug)]
 pub struct StreamProfile {
     // Underlying non-null pointer from realsense-sys.
@@ -164,7 +162,6 @@ impl TryFrom<NonNull<sys::rs2_stream_profile>> for StreamProfile {
     /// Returns [`StreamConstructionError::CouldNotDetermineIsDefault`] if it cannot be determined
     /// whether or not this stream is a default stream. This usually will only happen if the stream
     /// is invalidated (e.g. due to a device disconnect) when you try to construct it.
-    ///
     fn try_from(stream_profile_ptr: NonNull<sys::rs2_stream_profile>) -> Result<Self, Self::Error> {
         unsafe {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
@@ -230,7 +227,6 @@ impl StreamProfile {
     /// Returns [`StreamConstructionError::CouldNotDetermineIsDefault`] if it cannot be determined
     /// whether or not this stream is a default stream. This usually will only happen if the stream
     /// is invalidated (e.g. due to a device disconnect) when you try to construct it.
-    ///
     pub(crate) fn try_create(
         profiles: &NonNull<sys::rs2_stream_profile_list>,
         index: i32,
@@ -328,7 +324,6 @@ impl StreamProfile {
     /// # Errors
     ///
     /// Returns [`DataError::CouldNotGetExtrinsics`] if this call fails for whatever reason.
-    ///
     pub fn extrinsics(&self, to_profile: &StreamProfile) -> Result<Rs2Extrinsics, DataError> {
         unsafe {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
@@ -354,7 +349,6 @@ impl StreamProfile {
     /// # Errors
     ///
     /// Returns [`DataError::CouldNotSetExtrinsics`] if this call fails for whatever reason.
-    ///
     pub fn set_extrinsics(
         &self,
         to_profile: &StreamProfile,
@@ -385,7 +379,6 @@ impl StreamProfile {
     /// intrinsics.
     ///
     /// Returns [`DataError::CouldNotGetIntrinsics`] if this call fails for any other reason.
-    ///
     pub fn intrinsics(&self) -> Result<Rs2Intrinsics, DataError> {
         match self.stream {
             Rs2StreamKind::Depth => (),
@@ -424,7 +417,6 @@ impl StreamProfile {
     ///
     /// Returns [`DataError::CouldNotGetMotionIntrinsics`](DataError::CouldNotGetMotionIntrinsics)
     /// if this call fails for any other reason.
-    ///
     pub fn motion_intrinsics(&self) -> Result<Rs2MotionDeviceIntrinsics, DataError> {
         match self.stream {
             Rs2StreamKind::Gyro => (),
