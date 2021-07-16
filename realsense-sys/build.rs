@@ -1,5 +1,5 @@
 fn main() {
-    if cfg!(feature = "doc-only") {
+    if cfg!(feature = "docs-only") {
         return;
     }
 
