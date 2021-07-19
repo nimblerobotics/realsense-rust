@@ -20,12 +20,13 @@ pub enum Rs2TimestampDomain {
     /// The timestamp is measured directly relative to the device's internal clock, and then
     /// converted to the OS (host) system clock by measuring the difference.
     GlobalTime = sys::rs2_timestamp_domain_RS2_TIMESTAMP_DOMAIN_GLOBAL_TIME as i32,
-    // Not included since this just tells us the total number of domains
-    //
-    // Count = sys::rs2_timestamp_domain_RS2_TIMESTAMP_DOMAIN_COUNT,
+    /* Not included since this just tells us the total number of domains
+     *
+     * Count = sys::rs2_timestamp_domain_RS2_TIMESTAMP_DOMAIN_COUNT, */
 }
 
 impl Rs2TimestampDomain {
+    /// Get the timestamp domain variant as a `&CStr`
     pub fn as_cstr(&self) -> &'static CStr {
         unsafe {
             let ptr = sys::rs2_timestamp_domain_to_string(*self as sys::rs2_timestamp_domain);
@@ -33,6 +34,7 @@ impl Rs2TimestampDomain {
         }
     }
 
+    /// Get the timestamp domain variant as a `&str`
     pub fn as_str(&self) -> &'static str {
         self.as_cstr().to_str().unwrap()
     }

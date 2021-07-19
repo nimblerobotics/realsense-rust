@@ -28,7 +28,7 @@ lint:
   script:
     - rustc --version
     - cargo --version
-    - cargo clippy --all-targets --all-features -- -D warnings
+    - cargo clippy --all-targets --features=buildtime-bindgen,test-single-device -- -D warnings
 
 
 ##### ########## ########## ########## ########## #####
@@ -38,7 +38,7 @@ lint:
 doc-check:
   stage: doc
   script:
-    - cargo clippy --all-targets --all-features -- -A clippy::all -D clippy::missing_docs_in_private_items
+    - cargo clippy --all-targets --features docs-only -- -A clippy::all -D clippy::missing_docs_in_private_items
   allow_failure: true
 
 build_badges:

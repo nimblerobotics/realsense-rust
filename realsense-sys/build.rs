@@ -1,5 +1,17 @@
+//! Build script for finding / linking librealsense.
+//!
+//! This script has a few main functions:
+//!
+//! 1. Find librealsense on the current system
+//! 2. If the buildtime-bindgen feature is enabled, we run bindgen over the librealsense headers
+//!    and generate bindings.rs
+//! 3. Link this crate to the librealsense2 library.
+//!
+//! NOTE: If we build in "docs-only" mode (the feature), then this script does nothing, since we
+//! don't need to link to librealsense2 or regenerate bindings to build the docs.
+
 fn main() {
-    if cfg!(feature = "doc-only") {
+    if cfg!(feature = "docs-only") {
         return;
     }
 
