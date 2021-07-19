@@ -126,26 +126,25 @@ pub struct StreamProfile {
     // be manually deleted using `rs2_delete_stream_profile`. Streams are owned and managed by
     // their corresponding sensor, which are owned and managed by their corresponding devices.
     // Stream profile pointers should only be manually deleted if they are created by
-
-    // `rs2_clone_stream_profile`, which we do not use in the high-level API.
+    /// `rs2_clone_stream_profile`, which we do not use in the high-level API.
     ptr: NonNull<sys::rs2_stream_profile>,
-    // The kind of stream (e.g. depth, video, accelerometer, gyroscope, etc.)
+    /// The kind of stream (e.g. depth, video, accelerometer, gyroscope, etc.)
     stream: Rs2StreamKind,
-    // The bit format of the underlying data.
-    //
-    // For video streams this will describe how the pixels are packed and padded, for motion,
-    // pose, and point frame streams this will describe how to deconstruct individual points or
-    // observations.
+    /// The bit format of the underlying data.
+    ///
+    /// For video streams this will describe how the pixels are packed and padded, for motion,
+    /// pose, and point frame streams this will describe how to deconstruct individual points or
+    /// observations.
     format: Rs2Format,
-    // The stream index. Useful if you wish to enable / disable certain streams by index.
+    /// The stream index. Useful if you wish to enable / disable certain streams by index.
     index: usize,
-    // The unique identifier for the stream.
+    /// The unique identifier for the stream.
     unique_id: i32,
-    // The framerate of the stream (how fast it outputs data)
+    /// The framerate of the stream (how fast it outputs data)
     framerate: i32,
-    // Whether or not the stream is a default stream.
+    /// Whether or not the stream is a default stream.
     is_default: bool,
-    // Whether or not to drop the profile
+    /// Whether or not to drop the profile
     should_drop: bool,
 }
 

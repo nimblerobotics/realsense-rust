@@ -9,7 +9,10 @@ use thiserror::Error;
 /// Type representing the device and streams associated with a pipeline.
 #[derive(Debug)]
 pub struct PipelineProfile {
+    /// The device that this profile is configured for.
     device: Device,
+    /// A vector of stream profiles for streams that are emitting observations from the pipeline
+    /// that this profile corresponds to.
     streams: Vec<StreamProfile>,
 }
 
@@ -46,7 +49,6 @@ impl TryFrom<NonNull<sys::rs2_pipeline_profile>> for PipelineProfile {
     ///
     /// Returns [`PipelineProfileConstructionError::CouldNotRetrieveStreamCount`] if the length of
     /// the list of streams associated with the pipeline profile cannot be obtained.
-    ///
     fn try_from(
         pipeline_profile_ptr: NonNull<sys::rs2_pipeline_profile>,
     ) -> Result<Self, Self::Error> {
