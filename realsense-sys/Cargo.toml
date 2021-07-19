@@ -24,6 +24,8 @@ default = []
 #   feature is recommended if you're not on the latest version of the RealSense
 #   driver.
 buildtime-bindgen = ["bindgen"]
+# Only build docs, don't link to anything
+docs-only = []
 
 [dependencies]
 # None required. However, access to the RealSense library is necessary.
@@ -31,3 +33,7 @@ buildtime-bindgen = ["bindgen"]
 [build-dependencies]
 bindgen = { version = "0.57", optional = true }
 pkg-config = { version = "0.3" }
+
+[package.metadata.docs.rs]
+no-default-features = true
+features = ["docs-only"]

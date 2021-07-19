@@ -10,7 +10,6 @@
 //! The hierarchy is effectively:
 //!
 //! [`Device`] |-> [`Sensor`] |-> [`StreamProfile`]
-//!
 
 use crate::{
     check_rs2_error,
@@ -54,13 +53,12 @@ pub enum SensorConstructionError {
 ///
 /// 1. From the device's [sensor list](crate::device::Device::sensors)
 /// 2. By getting the sensor that [corresponds to a given frame](crate::frame::FrameEx::sensor)
-///
 pub struct Sensor {
-    // The underlying non-null sensor pointer.
-    //
-    // This should not be deleted unless the sensor was constructed via `rs2_create_sensor`
+    /// The underlying non-null sensor pointer.
+    ///
+    /// This should not be deleted unless the sensor was constructed via `rs2_create_sensor`
     sensor_ptr: NonNull<sys::rs2_sensor>,
-    // Boolean used for telling us if we should drop the sensor pointer or not.
+    /// Boolean used for telling us if we should drop the sensor pointer or not.
     should_drop: bool,
 }
 
@@ -108,7 +106,6 @@ impl Sensor {
     ///
     /// Returns [`SensorConstructionError::CouldNotGetSensorFromList`] if the index is invalid or
     /// if the sensor list is invalid in some way.
-    ///
     pub(crate) fn try_create(
         sensor_list: &NonNull<sys::rs2_sensor_list>,
         index: i32,
@@ -136,7 +133,6 @@ impl Sensor {
     /// Returns [`DeviceConstructionError::CouldNotCreateDeviceFromSensor`] if the device cannot be
     /// obtained due to the physical device being disconnected or the internal sensor pointer
     /// becoming invalid.
-    ///
     pub fn device(&self) -> Result<Device, DeviceConstructionError> {
         unsafe {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
@@ -175,7 +171,6 @@ impl Sensor {
     ///
     /// Returns An `f32` value corresponding to that option within the librealsense2 library, or None
     /// if the option is not supported.
-    ///
     pub fn get_option(&self, option: Rs2Option) -> Option<f32> {
         if !self.supports_option(option) {
             return None;
@@ -213,7 +208,6 @@ impl Sensor {
     ///
     /// Returns [`OptionSetError::CouldNotSetOption`] if the option is supported and not read-only,
     /// but could not be set for another reason (invalid value, internal exception, etc.).
-    ///
     pub fn set_option(&mut self, option: Rs2Option, value: f32) -> Result<(), OptionSetError> {
         if !self.supports_option(option) {
             return Err(OptionSetError::OptionNotSupported);
@@ -241,7 +235,6 @@ impl Sensor {
     /// Gets the range for a given option.
     ///
     /// Returns some option range if the sensor supports the option, else `None`.
-    ///
     pub fn get_option_range(&self, option: Rs2Option) -> Option<Rs2OptionRange> {
         if !self.supports_option(option) {
             return None;
@@ -283,7 +276,6 @@ impl Sensor {
     /// Predicate for determining if this sensor supports a given option
     ///
     /// Returns true iff the option is supported by this sensor.
-    ///
     pub fn supports_option(&self, option: Rs2Option) -> bool {
         unsafe {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();
@@ -306,7 +298,6 @@ impl Sensor {
     /// Predicate for determining if the provided option is immutable or not.
     ///
     /// Returns true if the option is supported and can be mutated, otherwise false.
-    ///
     pub fn is_option_read_only(&self, option: Rs2Option) -> bool {
         if !self.supports_option(option) {
             return false;
@@ -334,7 +325,6 @@ impl Sensor {
     ///
     /// Returns a vector containing all the stream profiles associated with the sensor. The vector
     /// will have a length of zero if an error occurs while getting the stream profiles.
-    ///
     pub fn stream_profiles(&self) -> Vec<StreamProfile> {
         let mut profiles = Vec::new();
         unsafe {
@@ -377,7 +367,6 @@ impl Sensor {
     ///
     /// Returns some value corresponding to the camera info requested if this sensor supports that
     /// camera info, else `None`.
-    ///
     pub fn info(&self, camera_info: Rs2CameraInfo) -> Option<&CStr> {
         if !self.supports_info(camera_info) {
             return None;
@@ -405,7 +394,6 @@ impl Sensor {
     /// Predicate method for determining if the sensor supports a certain kind of camera info.
     ///
     /// Returns true iff the sensor has a value associated with the `camera_info` key.
-    ///
     pub fn supports_info(&self, camera_info: Rs2CameraInfo) -> bool {
         unsafe {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();

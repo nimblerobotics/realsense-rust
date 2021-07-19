@@ -190,7 +190,6 @@ impl<K> TryFrom<NonNull<sys::rs2_frame>> for ImageFrame<K> {
     /// - [`CouldNotGetData`](FrameConstructionError::CouldNotGetData)
     ///
     /// See [`FrameConstructionError`] documentation for more details.
-    ///
     fn try_from(frame_ptr: NonNull<sys::rs2_frame>) -> Result<Self, Self::Error> {
         unsafe {
             let mut err = ptr::null_mut::<sys::rs2_error>();
@@ -537,9 +536,8 @@ impl<K> ImageFrame<K> {
     ///
     /// This is a raw pointer to the underlying data. This data has to be interpreted according to
     /// the format of the frame itself. In most scenarios you will probably want to just use the
-    /// `get_unchecked` function associated with the [`FrameEx`](crate::fram::prelude::FrameEx)
-    /// trait, but this can be useful if you need more immediate access to the underlying pixel
-    /// data.
+    /// `get_unchecked` function associated with the [`FrameEx`](crate::frame::FrameEx) trait, but
+    /// this can be useful if you need more immediate access to the underlying pixel data.
     pub unsafe fn get_data(&self) -> &std::os::raw::c_void {
         self.data.as_ref()
     }
