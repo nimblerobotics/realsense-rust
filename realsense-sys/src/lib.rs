@@ -73,10 +73,11 @@
 //! buildtime-bindgen feature of the crate. Note that in general this can break things if the API
 //! for your version of librealsense2 is different with regards to what the realsense-rust crate is
 //! expecting.
-//!
 
 // Allow all warnings here -- Bindgen generates this file, we really don't care about individual
 // warnings since we can't really do much about them, we'd have to fix bindgen upstream or
 // librealsense2 itself.
 #![allow(warnings)]
+#![allow(clippy::missing_docs_in_private_items)]
+
 include!("../bindings/bindings.rs");
