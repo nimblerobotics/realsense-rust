@@ -7,6 +7,8 @@ API. Run any of the examples here using cargo: `$cargo run --example <demo name>
 
 - [enumerate\_devices.rs](enumerate_devices.rs): Enumerates all devices connected to the host that are compatible with
   the Intel RealSense library.
+- [opencv.rs](opencv.rs): Streams from a device with depth and color sensors, converts the frames to OpenCV Mats, and
+  visualizes the results using OpenCV's High-Level GUI library.
 
 ## 435i
 
