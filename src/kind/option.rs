@@ -61,6 +61,17 @@ pub enum OptionSetError {
 /// - Replacement: N/A.
 /// - Old Description: "Get the Zero order point y."
 ///
+/// `Trigger camera accuracy health`
+///
+/// - Deprecated as of 2.46 (not officially released, so technically 2.47)
+/// - Old Description: "Enable Depth & color frame sync with periodic calibration for proper
+/// alignment"
+///
+/// `Reset camera accuracy health`
+///
+/// - Deprecated as of 2.46 (not officially released, so technically 2.47)
+/// - Old Description: "Reset Camera Accuracy metric (if affected by TriggerCameraAccuracyHealth
+/// option)."
 #[repr(i32)]
 #[derive(FromPrimitive, ToPrimitive, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Rs2Option {
@@ -113,7 +124,6 @@ pub enum Rs2Option {
     /// - `1`: enable laser
     /// - `2`: enable auto laser
     /// - `3`: enable LED
-    ///
     EmitterEnabled = sys::rs2_option_RS2_OPTION_EMITTER_ENABLED as i32,
     /// Set the number of frames the user is allowed to keep per stream.
     /// Trying to hold on to more frames will cause frame drops.
@@ -125,7 +135,6 @@ pub enum Rs2Option {
     /// - Static
     /// - Anti-Flicker
     /// - Hybrid
-    ///
     AutoExposureMode = sys::rs2_option_RS2_OPTION_AUTO_EXPOSURE_MODE as i32,
     /// Set the power line frequency control for anti-flickering:
     ///
@@ -133,7 +142,6 @@ pub enum Rs2Option {
     /// - 50Hz
     /// - 60Hz
     /// - Auto
-    ///
     PowerLineFrequency = sys::rs2_option_RS2_OPTION_POWER_LINE_FREQUENCY as i32,
     /// Get the current Temperature of the ASIC.
     AsicTemperature = sys::rs2_option_RS2_OPTION_ASIC_TEMPERATURE as i32,
@@ -232,10 +240,6 @@ pub enum Rs2Option {
     EmitterAlwaysOn = sys::rs2_option_RS2_OPTION_EMITTER_ALWAYS_ON as i32,
     /// Depth Thermal Compensation for selected D400 SKUs.
     ThermalCompensation = sys::rs2_option_RS2_OPTION_THERMAL_COMPENSATION as i32,
-    /// Enable/disable depth & color frame sync with periodic calibration for proper alignment.
-    TriggerCameraAccuracyHealth = sys::rs2_option_RS2_OPTION_TRIGGER_CAMERA_ACCURACY_HEALTH as i32,
-    /// Reset Camera Accuracy metric (if affected by TriggerCameraAccuracyHealth option).
-    ResetCameraAccuracyHealth = sys::rs2_option_RS2_OPTION_RESET_CAMERA_ACCURACY_HEALTH as i32,
     /// Set host performance mode to optimize device settings so host can keep up with workload.
     /// Take USB transaction granularity as an example. Setting option to low performance host leads
     /// to larger USB transaction sizes and a reduced number of transactions. This improves performance
@@ -271,22 +275,27 @@ pub enum Rs2Option {
     /// set to 16. If the requested gain limit is greater than 248, it will be set to 248. Setting
     /// will not take effect until next streaming session.
     AutoGainLimit = sys::rs2_option_RS2_OPTION_AUTO_GAIN_LIMIT as i32,
-    // Not included since this just tells us the total number of options.
-    //
-    // Count = sys::rs2_option_RS2_OPTION_COUNT,
+    /// Enable receiver sensitivity according to ambient light, bounded by the Receiver GAin
+    /// control.
+    AutoReceiverSensitivity = sys::rs2_option_RS2_OPTION_AUTO_RX_SENSITIVITY as i32,
+    /// Changes the transmistter frequency frequencies increasing effective range over sharpness.
+    TransmitterFrequency = sys::rs2_option_RS2_OPTION_TRANSMITTER_FREQUENCY as i32,
+    /* Not included since this just tells us the total number of options.
+     *
+     * Count = sys::rs2_option_RS2_OPTION_COUNT, */
 }
 
 impl Rs2Option {
     /// Get the option as a CStr.
-    pub fn to_cstr(&self) -> &'static CStr {
+    pub fn to_cstr(self) -> &'static CStr {
         unsafe {
-            let ptr = sys::rs2_option_to_string(*self as sys::rs2_option);
+            let ptr = sys::rs2_option_to_string(self as sys::rs2_option);
             CStr::from_ptr(ptr)
         }
     }
 
     /// Get the option as a str.
-    pub fn to_str(&self) -> &'static str {
+    pub fn to_str(self) -> &'static str {
         self.to_cstr().to_str().unwrap()
     }
 }
@@ -317,15 +326,17 @@ mod tests {
 
     #[test]
     fn all_variants_exist() {
-        const DEPRECATED_OPTIONS: [i32; 4] = [
+        let deprecated_options = vec![
             sys::rs2_option_RS2_OPTION_ZERO_ORDER_POINT_X as i32,
             sys::rs2_option_RS2_OPTION_ZERO_ORDER_POINT_Y as i32,
             sys::rs2_option_RS2_OPTION_ZERO_ORDER_ENABLED as i32,
             sys::rs2_option_RS2_OPTION_AMBIENT_LIGHT as i32,
+            sys::rs2_option_RS2_OPTION_TRIGGER_CAMERA_ACCURACY_HEALTH as i32,
+            sys::rs2_option_RS2_OPTION_RESET_CAMERA_ACCURACY_HEALTH as i32,
         ];
 
         for i in 0..sys::rs2_option_RS2_OPTION_COUNT as i32 {
-            if DEPRECATED_OPTIONS.iter().any(|x| x == &i) {
+            if deprecated_options.iter().any(|x| x == &i) {
                 continue;
             }
 

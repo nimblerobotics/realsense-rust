@@ -3,7 +3,7 @@
 The project provides high-level bindings (crate `realsense_rust`) to librealsense2 library as well as low-level FFI
 (crate `realsense_sys`) interface.
 
-**Default bindings are for librealsense version: 2.44.0**
+**Default bindings are for librealsense version: 2.47.0**
 
 This project is hosted on both [Github](https://github.com/Tangram-Vision/realsense-rust) and
 [Gitlab](https://gitlab.com/tangram-vision-oss/realsense-rust/). While we're happy to receive pull / merge requests on
@@ -32,7 +32,7 @@ Use these by running `cargo run --features <name of feature>`
 ## Regenerating the API Bindings
 
 *Non-Linux users*: The current bindings are formatted for Linux. Users on systems other than Linux must run with the
-`buildtime-bindgen` feature to reformat the bindings. See the README in realsense-sys for more. 
+`buildtime-bindgen` feature to reformat the bindings. See the README in realsense-sys for more.
 
 *Backwards compatibility*: If you're using an older librealsense version, you may enable the `buildtime-bindgen` feature
 to re-generate the bindings. We make no claims of backwards compatibility; good luck.
@@ -61,12 +61,12 @@ to re-generate the bindings. We make no claims of backwards compatibility; good 
 ## Realsense-sys: A low-level API
 
 The realsense-sys crate provides C bindings generated from librealsense headers. See the realsense-sys
-[README](./realsense-sys/README.md) for more information. 
+[README](./realsense-sys/README.md) for more information.
 
 ## Design Philosophy
 
 There's a lot of thought that went into making this library Rust-safe. Check out the
-[architecture](./src/docs/architecture.rs) doc for our thoughts on Rust safety, error handling, and more for this API. 
+[architecture](./src/docs/architecture.rs) doc for our thoughts on Rust safety, error handling, and more for this API.
 
 ## Contributing
 

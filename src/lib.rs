@@ -3,7 +3,7 @@
 //! The project provides high-level bindings (crate `realsense_rust`) to librealsense2 library as well as low-level FFI
 //! (crate `realsense_sys`) interface.
 //!
-//! **Default bindings are for librealsense version: 2.44.0**
+//! **Default bindings are for librealsense version: 2.47.0**
 //!
 //! This project is hosted on both [Github](https://github.com/Tangram-Vision/realsense-rust) and
 //! [Gitlab](https://gitlab.com/tangram-vision-oss/realsense-rust/). While we're happy to receive pull / merge requests

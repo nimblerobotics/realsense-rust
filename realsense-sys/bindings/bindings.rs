@@ -13,10 +13,10 @@ pub const RS2_UNSIGNED_UPDATE_MODE_UPDATE: u32 = 0;
 pub const RS2_UNSIGNED_UPDATE_MODE_READ_ONLY: u32 = 1;
 pub const RS2_UNSIGNED_UPDATE_MODE_FULL: u32 = 2;
 pub const RS2_API_MAJOR_VERSION: u32 = 2;
-pub const RS2_API_MINOR_VERSION: u32 = 44;
+pub const RS2_API_MINOR_VERSION: u32 = 47;
 pub const RS2_API_PATCH_VERSION: u32 = 0;
 pub const RS2_API_BUILD_VERSION: u32 = 0;
-pub const RS2_API_VERSION: u32 = 24400;
+pub const RS2_API_VERSION: u32 = 24700;
 pub const RS2_DEFAULT_TIMEOUT: u32 = 15000;
 #[doc = "< Frames didn't arrived within 5 seconds"]
 pub const rs2_notification_category_RS2_NOTIFICATION_CATEGORY_FRAMES_TIMEOUT:
@@ -2390,6 +2390,20 @@ extern "C" {
     );
 }
 extern "C" {
+    #[doc = " Checks if the device and the provided firmware image are compatible"]
+    #[doc = " \\param[in]  device        Device to update"]
+    #[doc = " \\param[in]  fw_image      Firmware image buffer"]
+    #[doc = " \\param[in]  fw_image_size Firmware image buffer size in bytes"]
+    #[doc = " \\param[out] error         If non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
+    #[doc = " \\return                   Non-zero if the firmware is compatible with the device and 0 otherwise"]
+    pub fn rs2_check_firmware_compatibility(
+        device: *const rs2_device,
+        fw_image: *const ::std::os::raw::c_void,
+        fw_image_size: ::std::os::raw::c_int,
+        error: *mut *mut rs2_error,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
     #[doc = " Update device to the provided firmware by writing raw data directly to the flash, this command can be executed only on unlocked camera."]
     #[doc = " The device must be extendable to RS2_EXTENSION_UPDATABLE."]
     #[doc = " This call is executed on the caller's thread and it supports progress notifications via the optional callback."]
@@ -3140,10 +3154,12 @@ extern "C" {
     );
 }
 extern "C" {
-    #[doc = " Calculate the rectangle size on the specific target"]
-    #[doc = " \\param[in] frame         Left or right camera frame of size 256x144"]
-    #[doc = " \\param[out] rect_sides   The four rectangle side sizes in pixels with the order of top, bottom, left, and right"]
-    #[doc = " \\param[out] error        If non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
+    #[doc = " Extract the target dimensions on the specific target"]
+    #[doc = " \\param[in] frame            Left or right camera frame of specified size based on the target type"]
+    #[doc = " \\param[in] calib_type       Calibration target type"]
+    #[doc = " \\param[in] target_dims_size Target dimension array size"]
+    #[doc = " \\param[out] target_dims     The array to hold the result target dimensions calculated. For type RS2_CALIB_TARGET_RECT_GAUSSIAN_DOT_VERTICES, the four rectangle side sizes in pixels with the order of top, bottom, left, and right"]
+    #[doc = " \\param[out] error           If non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
     pub fn rs2_extract_target_dimensions(
         frame: *const rs2_frame,
         calib_type: rs2_calib_target_type,
@@ -3300,8 +3316,9 @@ pub const rs2_option_RS2_OPTION_SENSOR_MODE: rs2_option = 70;
 pub const rs2_option_RS2_OPTION_EMITTER_ALWAYS_ON: rs2_option = 71;
 #[doc = "< Depth Thermal Compensation for selected D400 SKUs"]
 pub const rs2_option_RS2_OPTION_THERMAL_COMPENSATION: rs2_option = 72;
-#[doc = "< Enable depth & color frame sync with periodic calibration for proper alignment"]
+#[doc = "< DEPRECATED as of 2.46!"]
 pub const rs2_option_RS2_OPTION_TRIGGER_CAMERA_ACCURACY_HEALTH: rs2_option = 73;
+#[doc = "< DEPRECATED as of 2.46!"]
 pub const rs2_option_RS2_OPTION_RESET_CAMERA_ACCURACY_HEALTH: rs2_option = 74;
 #[doc = "< Set host performance mode to optimize device settings so host can keep up with workload, for example, USB transaction granularity, setting option to low performance host leads to larger USB transaction size and reduced number of transactions which improves performance and stability if host is relatively weak as compared to workload"]
 pub const rs2_option_RS2_OPTION_HOST_PERFORMANCE: rs2_option = 75;
@@ -3327,8 +3344,12 @@ pub const rs2_option_RS2_OPTION_ENABLE_IR_REFLECTIVITY: rs2_option = 84;
 pub const rs2_option_RS2_OPTION_AUTO_EXPOSURE_LIMIT: rs2_option = 85;
 #[doc = "< Set and get auto gain limits ranging from 16 to 248. Default is 0 which means full gain. If the requested gain limit is less than 16, it will be set to 16. If the requested gain limit is greater than 248, it will be set to 248. Setting will not take effect until next streaming session."]
 pub const rs2_option_RS2_OPTION_AUTO_GAIN_LIMIT: rs2_option = 86;
+#[doc = "< Enable receiver sensitivity according to ambient light, bounded by the Receiver Gain control."]
+pub const rs2_option_RS2_OPTION_AUTO_RX_SENSITIVITY: rs2_option = 87;
+#[doc = "<changes the transmitter frequencies increasing effective range over sharpness."]
+pub const rs2_option_RS2_OPTION_TRANSMITTER_FREQUENCY: rs2_option = 88;
 #[doc = "< Number of enumeration values. Not a valid input: intended to be used in for-loops."]
-pub const rs2_option_RS2_OPTION_COUNT: rs2_option = 87;
+pub const rs2_option_RS2_OPTION_COUNT: rs2_option = 89;
 #[doc = " \\brief Defines general configuration controls."]
 #[doc = "These can generally be mapped to camera UVC controls, and can be set / queried at any time unless stated otherwise."]
 pub type rs2_option = ::std::os::raw::c_uint;
@@ -3429,19 +3450,6 @@ pub const rs2_digital_gain_RS2_DIGITAL_GAIN_LOW: rs2_digital_gain = 2;
 pub type rs2_digital_gain = ::std::os::raw::c_uint;
 extern "C" {
     pub fn rs2_digital_gain_to_string(preset: rs2_digital_gain) -> *const ::std::os::raw::c_char;
-}
-#[doc = "< not triggered until you give _NOW"]
-pub const rs2_cah_trigger_RS2_CAH_TRIGGER_MANUAL: rs2_cah_trigger = 0;
-#[doc = "< triggers CAH and leaves previous value intact!"]
-pub const rs2_cah_trigger_RS2_CAH_TRIGGER_NOW: rs2_cah_trigger = 1;
-#[doc = "< triggered periodically or with certain conditions"]
-pub const rs2_cah_trigger_RS2_CAH_TRIGGER_AUTO: rs2_cah_trigger = 2;
-#[doc = "< Number of enumeration values. Not a valid input: intended to be used in for-loops."]
-pub const rs2_cah_trigger_RS2_CAH_TRIGGER_COUNT: rs2_cah_trigger = 3;
-#[doc = " \\brief values for RS2_OPTION_TRIGGER_CAMERA_ACCURACY_HEALTH option."]
-pub type rs2_cah_trigger = ::std::os::raw::c_uint;
-extern "C" {
-    pub fn rs2_cah_trigger_to_string(preset: rs2_cah_trigger) -> *const ::std::os::raw::c_char;
 }
 #[doc = "< no change in settings, use device defaults"]
 pub const rs2_host_perf_mode_RS2_HOST_PERF_DEFAULT: rs2_host_perf_mode = 0;
