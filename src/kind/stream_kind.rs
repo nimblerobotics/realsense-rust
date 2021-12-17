@@ -41,6 +41,24 @@ pub enum Rs2StreamKind {
      * Count = sys::rs2_stream_RS2_STREAM_COUNT, */
 }
 
+impl std::fmt::Display for Rs2StreamKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let string = match self {
+            Rs2StreamKind::Any => "Any",
+            Rs2StreamKind::Depth => "Depth",
+            Rs2StreamKind::Color => "Color",
+            Rs2StreamKind::Infrared => "Infrared",
+            Rs2StreamKind::Fisheye => "Fisheye",
+            Rs2StreamKind::Gyro => "Gyro",
+            Rs2StreamKind::Accel => "Accel",
+            Rs2StreamKind::Gpio => "Gpio",
+            Rs2StreamKind::Pose => "Pose",
+            Rs2StreamKind::Confidence => "Confidence",
+        };
+        write!(f, "{}", string)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
