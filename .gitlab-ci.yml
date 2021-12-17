@@ -1,6 +1,6 @@
 # CONFIGURATION
 default:
-  image: 'registry.gitlab.com/tangram-vision-oss/realsense-rust/ci:latest'
+  image: "registry.gitlab.com/tangram-vision/oss/ci-oss/public-ci:latest"
   before_script:
     # Update rust in case the latest version isn't built into our docker image.
     - rustup update stable
@@ -9,7 +9,6 @@ stages:
   - test
   - doc
   - build_artifacts
-
 
 ##### ########## ########## ########## ########## #####
 # TEST STAGE
@@ -30,7 +29,6 @@ lint:
     - cargo --version
     - cargo clippy --all-targets --features=buildtime-bindgen,test-single-device -- -D warnings
 
-
 ##### ########## ########## ########## ########## #####
 # DOC STAGE
 # - [PASS OPT] checks for documentation on all relevant pieces of code
@@ -40,6 +38,14 @@ doc-check:
   script:
     - cargo clippy --all-targets --features docs-only -- -A clippy::all -D clippy::missing_docs_in_private_items
   allow_failure: true
+
+readme-check:
+  stage: doc
+  variables:
+    # Catches and fails on non-zero status
+    FF_ENABLE_BASH_EXIT_CODE_CHECK: 1
+  script:
+    - readme_check.sh --no-badges --no-title --no-indent-headings --no-license
 
 build_badges:
   stage: build_artifacts

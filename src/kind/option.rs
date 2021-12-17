@@ -280,6 +280,14 @@ pub enum Rs2Option {
     AutoReceiverSensitivity = sys::rs2_option_RS2_OPTION_AUTO_RX_SENSITIVITY as i32,
     /// Changes the transmistter frequency frequencies increasing effective range over sharpness.
     TransmitterFrequency = sys::rs2_option_RS2_OPTION_TRANSMITTER_FREQUENCY as i32,
+    /// Enables vertical binning which increases the maximal sensed distance.
+    VerticalBinning = sys::rs2_option_RS2_OPTION_VERTICAL_BINNING as i32,
+    /// Control receiver sensitivity to incoming light, both projected and ambient (same as APD on L515).
+    ReceiverSensitivity = sys::rs2_option_RS2_OPTION_RECEIVER_SENSITIVITY as i32,
+    /// Enable / disable color image auto-exposure
+    AutoExposureLimitToggle = sys::rs2_option_RS2_OPTION_AUTO_EXPOSURE_LIMIT_TOGGLE as i32,
+    /// Enable / disable color image auto-gain
+    AutoGainLimitToggle = sys::rs2_option_RS2_OPTION_AUTO_GAIN_LIMIT_TOGGLE as i32,
     /* Not included since this just tells us the total number of options.
      *
      * Count = sys::rs2_option_RS2_OPTION_COUNT, */

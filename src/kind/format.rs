@@ -108,6 +108,8 @@ pub enum Rs2Format {
     Z16H = sys::rs2_format_RS2_FORMAT_Z16H as i32,
     /// 16-bit per pixel frame grabber format
     Fg = sys::rs2_format_RS2_FORMAT_FG as i32,
+    /// 12-bit per pixel
+    Y411 = sys::rs2_format_RS2_FORMAT_Y411 as i32,
     // Not included since this just tells us the total number of formats
     //
     // Count = sys::rs2_format_RS2_FORMAT_COUNT,

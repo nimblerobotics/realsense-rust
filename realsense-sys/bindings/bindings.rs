@@ -13,11 +13,12 @@ pub const RS2_UNSIGNED_UPDATE_MODE_UPDATE: u32 = 0;
 pub const RS2_UNSIGNED_UPDATE_MODE_READ_ONLY: u32 = 1;
 pub const RS2_UNSIGNED_UPDATE_MODE_FULL: u32 = 2;
 pub const RS2_API_MAJOR_VERSION: u32 = 2;
-pub const RS2_API_MINOR_VERSION: u32 = 47;
+pub const RS2_API_MINOR_VERSION: u32 = 50;
 pub const RS2_API_PATCH_VERSION: u32 = 0;
 pub const RS2_API_BUILD_VERSION: u32 = 0;
-pub const RS2_API_VERSION: u32 = 24700;
+pub const RS2_API_VERSION: u32 = 25000;
 pub const RS2_DEFAULT_TIMEOUT: u32 = 15000;
+pub type __uint16_t = ::std::os::raw::c_ushort;
 #[doc = "< Frames didn't arrived within 5 seconds"]
 pub const rs2_notification_category_RS2_NOTIFICATION_CATEGORY_FRAMES_TIMEOUT:
     rs2_notification_category = 0;
@@ -856,6 +857,9 @@ pub const rs2_matchers_RS2_MATCHER_DEFAULT: rs2_matchers = 6;
 pub const rs2_matchers_RS2_MATCHER_COUNT: rs2_matchers = 7;
 #[doc = " \\brief Specifies types of different matchers"]
 pub type rs2_matchers = ::std::os::raw::c_uint;
+extern "C" {
+    pub fn rs2_matchers_to_string(stream: rs2_matchers) -> *const ::std::os::raw::c_char;
+}
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct rs2_device_info {
@@ -1092,149 +1096,6 @@ extern "C" {
 extern "C" {
     pub fn rs2_free_error(error: *mut rs2_error);
 }
-extern "C" {
-    #[doc = " \\brief Creates RealSense context that is required for the rest of the API."]
-    #[doc = " \\param[in] api_version Users are expected to pass their version of \\c RS2_API_VERSION to make sure they are running the correct librealsense version."]
-    #[doc = " \\param[out] error  If non-null, receives any error that occurs during this call, otherwise, errors are ignored."]
-    #[doc = " \\return            Context object"]
-    pub fn rs2_create_context(
-        api_version: ::std::os::raw::c_int,
-        error: *mut *mut rs2_error,
-    ) -> *mut rs2_context;
-}
-extern "C" {
-    #[doc = " \\brief Frees the relevant context object."]
-    #[doc = " \\param[in] context Object that is no longer needed"]
-    pub fn rs2_delete_context(context: *mut rs2_context);
-}
-extern "C" {
-    #[doc = " set callback to get devices changed events"]
-    #[doc = " these events will be raised by the context whenever new RealSense device is connected or existing device gets disconnected"]
-    #[doc = " \\param context     Object representing librealsense session"]
-    #[doc = " \\param[in] callback callback object created from c++ application. ownership over the callback object is moved into the context"]
-    #[doc = " \\param[out] error  if non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
-    pub fn rs2_set_devices_changed_callback_cpp(
-        context: *mut rs2_context,
-        callback: *mut rs2_devices_changed_callback,
-        error: *mut *mut rs2_error,
-    );
-}
-extern "C" {
-    #[doc = " set callback to get devices changed events"]
-    #[doc = " these events will be raised by the context whenever new RealSense device is connected or existing device gets disconnected"]
-    #[doc = " \\param context     Object representing librealsense session"]
-    #[doc = " \\param[in] callback function pointer to register as per-notifications callback"]
-    #[doc = " \\param[out] error  if non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
-    pub fn rs2_set_devices_changed_callback(
-        context: *const rs2_context,
-        callback: rs2_devices_changed_callback_ptr,
-        user: *mut ::std::os::raw::c_void,
-        error: *mut *mut rs2_error,
-    );
-}
-extern "C" {
-    #[doc = " Create a new device and add it to the context"]
-    #[doc = " \\param ctx   The context to which the new device will be added"]
-    #[doc = " \\param file  The file from which the device should be created"]
-    #[doc = " \\param[out] error     If non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
-    #[doc = " @return  A pointer to a device that plays data from the file, or null in case of failure"]
-    pub fn rs2_context_add_device(
-        ctx: *mut rs2_context,
-        file: *const ::std::os::raw::c_char,
-        error: *mut *mut rs2_error,
-    ) -> *mut rs2_device;
-}
-extern "C" {
-    #[doc = " Add an instance of software device to the context"]
-    #[doc = " \\param ctx   The context to which the new device will be added"]
-    #[doc = " \\param dev   Instance of software device to register into the context"]
-    #[doc = " \\param[out] error     If non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
-    pub fn rs2_context_add_software_device(
-        ctx: *mut rs2_context,
-        dev: *mut rs2_device,
-        error: *mut *mut rs2_error,
-    );
-}
-extern "C" {
-    #[doc = " Removes a playback device from the context, if exists"]
-    #[doc = " \\param[in]  ctx       The context from which the device should be removed"]
-    #[doc = " \\param[in]  file      The file name that was used to add the device"]
-    #[doc = " \\param[out] error     If non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
-    pub fn rs2_context_remove_device(
-        ctx: *mut rs2_context,
-        file: *const ::std::os::raw::c_char,
-        error: *mut *mut rs2_error,
-    );
-}
-extern "C" {
-    #[doc = " Removes tracking module."]
-    #[doc = " function query_devices() locks the tracking module in the tm_context object."]
-    #[doc = " If the tracking module device is not used it should be removed using this function, so that other applications could find it."]
-    #[doc = " This function can be used both before the call to query_device() to prevent enabling tracking modules or afterwards to"]
-    #[doc = " release them."]
-    pub fn rs2_context_unload_tracking_module(ctx: *mut rs2_context, error: *mut *mut rs2_error);
-}
-extern "C" {
-    #[doc = " create a static snapshot of all connected devices at the time of the call"]
-    #[doc = " \\param context     Object representing librealsense session"]
-    #[doc = " \\param[out] error  if non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
-    #[doc = " \\return            the list of devices, should be released by rs2_delete_device_list"]
-    pub fn rs2_query_devices(
-        context: *const rs2_context,
-        error: *mut *mut rs2_error,
-    ) -> *mut rs2_device_list;
-}
-extern "C" {
-    #[doc = " create a static snapshot of all connected devices at the time of the call"]
-    #[doc = " \\param context     Object representing librealsense session"]
-    #[doc = " \\param product_mask Controls what kind of devices will be returned"]
-    #[doc = " \\param[out] error  if non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
-    #[doc = " \\return            the list of devices, should be released by rs2_delete_device_list"]
-    pub fn rs2_query_devices_ex(
-        context: *const rs2_context,
-        product_mask: ::std::os::raw::c_int,
-        error: *mut *mut rs2_error,
-    ) -> *mut rs2_device_list;
-}
-extern "C" {
-    #[doc = " \\brief Creates RealSense device_hub ."]
-    #[doc = " \\param[in] context The context for the device hub"]
-    #[doc = " \\param[out] error  If non-null, receives any error that occurs during this call, otherwise, errors are ignored."]
-    #[doc = " \\return            Device hub object"]
-    pub fn rs2_create_device_hub(
-        context: *const rs2_context,
-        error: *mut *mut rs2_error,
-    ) -> *mut rs2_device_hub;
-}
-extern "C" {
-    #[doc = " \\brief Frees the relevant device hub object."]
-    #[doc = " \\param[in] hub Object that is no longer needed"]
-    pub fn rs2_delete_device_hub(hub: *const rs2_device_hub);
-}
-extern "C" {
-    #[doc = " If any device is connected return it, otherwise wait until next RealSense device connects."]
-    #[doc = " Calling this method multiple times will cycle through connected devices"]
-    #[doc = " \\param[in] ctx The context to creat the device"]
-    #[doc = " \\param[in] hub The device hub object"]
-    #[doc = " \\param[out] error  If non-null, receives any error that occurs during this call, otherwise, errors are ignored."]
-    #[doc = " \\return            device object"]
-    pub fn rs2_device_hub_wait_for_device(
-        hub: *const rs2_device_hub,
-        error: *mut *mut rs2_error,
-    ) -> *mut rs2_device;
-}
-extern "C" {
-    #[doc = " Checks if device is still connected"]
-    #[doc = " \\param[in] hub The device hub object"]
-    #[doc = " \\param[in] device The device"]
-    #[doc = " \\param[out] error  If non-null, receives any error that occurs during this call, otherwise, errors are ignored."]
-    #[doc = " \\return            1 if the device is connected, 0 otherwise"]
-    pub fn rs2_device_hub_is_device_connected(
-        hub: *const rs2_device_hub,
-        device: *const rs2_device,
-        error: *mut *mut rs2_error,
-    ) -> ::std::os::raw::c_int;
-}
 #[doc = "< Friendly name"]
 pub const rs2_camera_info_RS2_CAMERA_INFO_NAME: rs2_camera_info = 0;
 #[doc = "< Device serial number"]
@@ -1357,8 +1218,10 @@ pub const rs2_format_RS2_FORMAT_W10: rs2_format = 27;
 pub const rs2_format_RS2_FORMAT_Z16H: rs2_format = 28;
 #[doc = "< 16-bit per-pixel frame grabber format."]
 pub const rs2_format_RS2_FORMAT_FG: rs2_format = 29;
+#[doc = "< 12-bit per-pixel."]
+pub const rs2_format_RS2_FORMAT_Y411: rs2_format = 30;
 #[doc = "< Number of enumeration values. Not a valid input: intended to be used in for-loops."]
-pub const rs2_format_RS2_FORMAT_COUNT: rs2_format = 30;
+pub const rs2_format_RS2_FORMAT_COUNT: rs2_format = 31;
 #[doc = " \\brief A stream's format identifies how binary data is encoded within a frame."]
 pub type rs2_format = ::std::os::raw::c_uint;
 extern "C" {
@@ -2139,6 +2002,188 @@ extern "C" {
     ) -> f32;
 }
 extern "C" {
+    pub fn rs2_project_point_to_pixel(
+        pixel: *mut f32,
+        intrin: *const rs2_intrinsics,
+        point: *const f32,
+    );
+}
+extern "C" {
+    pub fn rs2_deproject_pixel_to_point(
+        point: *mut f32,
+        intrin: *const rs2_intrinsics,
+        pixel: *const f32,
+        depth: f32,
+    );
+}
+extern "C" {
+    pub fn rs2_transform_point_to_point(
+        to_point: *mut f32,
+        extrin: *const rs2_extrinsics,
+        from_point: *const f32,
+    );
+}
+extern "C" {
+    pub fn rs2_fov(intrin: *const rs2_intrinsics, to_fov: *mut f32);
+}
+extern "C" {
+    pub fn rs2_project_color_pixel_to_depth_pixel(
+        to_pixel: *mut f32,
+        data: *const u16,
+        depth_scale: f32,
+        depth_min: f32,
+        depth_max: f32,
+        depth_intrin: *const rs2_intrinsics,
+        color_intrin: *const rs2_intrinsics,
+        color_to_depth: *const rs2_extrinsics,
+        depth_to_color: *const rs2_extrinsics,
+        from_pixel: *const f32,
+    );
+}
+extern "C" {
+    #[doc = " \\brief Creates RealSense context that is required for the rest of the API."]
+    #[doc = " \\param[in] api_version Users are expected to pass their version of \\c RS2_API_VERSION to make sure they are running the correct librealsense version."]
+    #[doc = " \\param[out] error  If non-null, receives any error that occurs during this call, otherwise, errors are ignored."]
+    #[doc = " \\return            Context object"]
+    pub fn rs2_create_context(
+        api_version: ::std::os::raw::c_int,
+        error: *mut *mut rs2_error,
+    ) -> *mut rs2_context;
+}
+extern "C" {
+    #[doc = " \\brief Frees the relevant context object."]
+    #[doc = " \\param[in] context Object that is no longer needed"]
+    pub fn rs2_delete_context(context: *mut rs2_context);
+}
+extern "C" {
+    #[doc = " set callback to get devices changed events"]
+    #[doc = " these events will be raised by the context whenever new RealSense device is connected or existing device gets disconnected"]
+    #[doc = " \\param context     Object representing librealsense session"]
+    #[doc = " \\param[in] callback callback object created from c++ application. ownership over the callback object is moved into the context"]
+    #[doc = " \\param[out] error  if non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
+    pub fn rs2_set_devices_changed_callback_cpp(
+        context: *mut rs2_context,
+        callback: *mut rs2_devices_changed_callback,
+        error: *mut *mut rs2_error,
+    );
+}
+extern "C" {
+    #[doc = " set callback to get devices changed events"]
+    #[doc = " these events will be raised by the context whenever new RealSense device is connected or existing device gets disconnected"]
+    #[doc = " \\param context     Object representing librealsense session"]
+    #[doc = " \\param[in] callback function pointer to register as per-notifications callback"]
+    #[doc = " \\param[out] error  if non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
+    pub fn rs2_set_devices_changed_callback(
+        context: *const rs2_context,
+        callback: rs2_devices_changed_callback_ptr,
+        user: *mut ::std::os::raw::c_void,
+        error: *mut *mut rs2_error,
+    );
+}
+extern "C" {
+    #[doc = " Create a new device and add it to the context"]
+    #[doc = " \\param ctx   The context to which the new device will be added"]
+    #[doc = " \\param file  The file from which the device should be created"]
+    #[doc = " \\param[out] error     If non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
+    #[doc = " @return  A pointer to a device that plays data from the file, or null in case of failure"]
+    pub fn rs2_context_add_device(
+        ctx: *mut rs2_context,
+        file: *const ::std::os::raw::c_char,
+        error: *mut *mut rs2_error,
+    ) -> *mut rs2_device;
+}
+extern "C" {
+    #[doc = " Add an instance of software device to the context"]
+    #[doc = " \\param ctx   The context to which the new device will be added"]
+    #[doc = " \\param dev   Instance of software device to register into the context"]
+    #[doc = " \\param[out] error     If non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
+    pub fn rs2_context_add_software_device(
+        ctx: *mut rs2_context,
+        dev: *mut rs2_device,
+        error: *mut *mut rs2_error,
+    );
+}
+extern "C" {
+    #[doc = " Removes a playback device from the context, if exists"]
+    #[doc = " \\param[in]  ctx       The context from which the device should be removed"]
+    #[doc = " \\param[in]  file      The file name that was used to add the device"]
+    #[doc = " \\param[out] error     If non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
+    pub fn rs2_context_remove_device(
+        ctx: *mut rs2_context,
+        file: *const ::std::os::raw::c_char,
+        error: *mut *mut rs2_error,
+    );
+}
+extern "C" {
+    #[doc = " Removes tracking module."]
+    #[doc = " function query_devices() locks the tracking module in the tm_context object."]
+    #[doc = " If the tracking module device is not used it should be removed using this function, so that other applications could find it."]
+    #[doc = " This function can be used both before the call to query_device() to prevent enabling tracking modules or afterwards to"]
+    #[doc = " release them."]
+    pub fn rs2_context_unload_tracking_module(ctx: *mut rs2_context, error: *mut *mut rs2_error);
+}
+extern "C" {
+    #[doc = " create a static snapshot of all connected devices at the time of the call"]
+    #[doc = " \\param context     Object representing librealsense session"]
+    #[doc = " \\param[out] error  if non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
+    #[doc = " \\return            the list of devices, should be released by rs2_delete_device_list"]
+    pub fn rs2_query_devices(
+        context: *const rs2_context,
+        error: *mut *mut rs2_error,
+    ) -> *mut rs2_device_list;
+}
+extern "C" {
+    #[doc = " create a static snapshot of all connected devices at the time of the call"]
+    #[doc = " \\param context     Object representing librealsense session"]
+    #[doc = " \\param product_mask Controls what kind of devices will be returned"]
+    #[doc = " \\param[out] error  if non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
+    #[doc = " \\return            the list of devices, should be released by rs2_delete_device_list"]
+    pub fn rs2_query_devices_ex(
+        context: *const rs2_context,
+        product_mask: ::std::os::raw::c_int,
+        error: *mut *mut rs2_error,
+    ) -> *mut rs2_device_list;
+}
+extern "C" {
+    #[doc = " \\brief Creates RealSense device_hub ."]
+    #[doc = " \\param[in] context The context for the device hub"]
+    #[doc = " \\param[out] error  If non-null, receives any error that occurs during this call, otherwise, errors are ignored."]
+    #[doc = " \\return            Device hub object"]
+    pub fn rs2_create_device_hub(
+        context: *const rs2_context,
+        error: *mut *mut rs2_error,
+    ) -> *mut rs2_device_hub;
+}
+extern "C" {
+    #[doc = " \\brief Frees the relevant device hub object."]
+    #[doc = " \\param[in] hub Object that is no longer needed"]
+    pub fn rs2_delete_device_hub(hub: *const rs2_device_hub);
+}
+extern "C" {
+    #[doc = " If any device is connected return it, otherwise wait until next RealSense device connects."]
+    #[doc = " Calling this method multiple times will cycle through connected devices"]
+    #[doc = " \\param[in] ctx The context to creat the device"]
+    #[doc = " \\param[in] hub The device hub object"]
+    #[doc = " \\param[out] error  If non-null, receives any error that occurs during this call, otherwise, errors are ignored."]
+    #[doc = " \\return            device object"]
+    pub fn rs2_device_hub_wait_for_device(
+        hub: *const rs2_device_hub,
+        error: *mut *mut rs2_error,
+    ) -> *mut rs2_device;
+}
+extern "C" {
+    #[doc = " Checks if device is still connected"]
+    #[doc = " \\param[in] hub The device hub object"]
+    #[doc = " \\param[in] device The device"]
+    #[doc = " \\param[out] error  If non-null, receives any error that occurs during this call, otherwise, errors are ignored."]
+    #[doc = " \\return            1 if the device is connected, 0 otherwise"]
+    pub fn rs2_device_hub_is_device_connected(
+        hub: *const rs2_device_hub,
+        device: *const rs2_device,
+        error: *mut *mut rs2_error,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
     #[doc = " Determines number of devices in a list."]
     #[doc = " \\param[in]  info_list The list of connected devices captured using rs2_query_devices"]
     #[doc = " \\param[out] error     If non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
@@ -2529,14 +2574,14 @@ extern "C" {
     #[doc = "}"]
     #[doc = "average step count - number of frames to average, must be between 1 - 30, default = 20"]
     #[doc = "step count - max iteration steps, must be between 5 - 30, default = 10"]
-    #[doc = "accuracy - Subpixel accuracy level, value can be one of: Very high = 0 (0.025%), High = 1 (0.05%), Medium = 2 (0.1%), Low = 3 (0.2%), Default = Very high (0.025%), default is very high (0.025%)"]
+    #[doc = "accuracy - Subpixel accuracy level, value can be one of: Very high = 0 (0.025%), High = 1 (0.05%), Medium = 2 (0.1%), Low = 3 (0.2%), Default = Very high (0.025%), default is Medium"]
     #[doc = "scan_parameter - value can be one of: Py scan (default) = 0, Rx scan = 1"]
     #[doc = "data_sampling - value can be one of:polling data sampling = 0, interrupt data sampling = 1"]
     #[doc = "if json is nullptr it will be ignored and calibration will use the default parameters"]
-    #[doc = " \\param[in]  content_size        Json string size if its 0 the json will be ignored and calibration will use the default parameters"]
-    #[doc = " \\param[in]  callback            Optional callback to get progress notifications"]
-    #[doc = " \\param[in] timeout_ms          Timeout in ms (use 5000 msec unless instructed otherwise)"]
-    #[doc = " \\return                         New calibration table"]
+    #[doc = " \\param[in]  content_size       Json string size if its 0 the json will be ignored and calibration will use the default parameters"]
+    #[doc = " \\param[in]  callback           Optional callback to get progress notifications"]
+    #[doc = " \\param[in]  timeout_ms         Timeout in ms (use 5000 msec unless instructed otherwise)"]
+    #[doc = " \\return                        New calibration table"]
     pub fn rs2_run_tare_calibration_cpp(
         dev: *mut rs2_device,
         ground_truth_mm: f32,
@@ -2635,7 +2680,7 @@ extern "C" {
     #[doc = "}"]
     #[doc = "average step count - number of frames to average, must be between 1 - 30, default = 20"]
     #[doc = "step count - max iteration steps, must be between 5 - 30, default = 10"]
-    #[doc = "accuracy - Subpixel accuracy level, value can be one of: Very high = 0 (0.025%), High = 1 (0.05%), Medium = 2 (0.1%), Low = 3 (0.2%), Default = Very high (0.025%), default is very high (0.025%)"]
+    #[doc = "accuracy - Subpixel accuracy level, value can be one of: Very high = 0 (0.025%), High = 1 (0.05%), Medium = 2 (0.1%), Low = 3 (0.2%), Default = Very high (0.025%), default is Medium"]
     #[doc = "scan_parameter - value can be one of: Py scan (default) = 0, Rx scan = 1"]
     #[doc = "data_sampling - value can be one of:polling data sampling = 0, interrupt data sampling = 1"]
     #[doc = "if json is nullptr it will be ignored and calibration will use the default parameters"]
@@ -2686,6 +2731,146 @@ extern "C" {
         content_size: ::std::os::raw::c_uint,
         error: *mut *mut rs2_error,
     );
+}
+extern "C" {
+    #[doc = "  Run target-based focal length calibration"]
+    #[doc = " \\param[in]    device: device to calibrate"]
+    #[doc = " \\param[in]    left_queue: container for left IR frames with resoluton of  1280x720 and the target in the center of 320x240 pixels ROI."]
+    #[doc = " \\param[in]    right_queue: container for right IR frames with resoluton of  1280x720 and the target in the center of 320x240 pixels ROI"]
+    #[doc = " \\param[in]    target_width: the rectangle width in mm on the target"]
+    #[doc = " \\param[in]    target_height: the rectangle height in mm on the target"]
+    #[doc = " \\param[in]    adjust_both_sides: 1 for adjusting both left and right camera calibration tables, and 0 for adjusting right camera calibraion table only"]
+    #[doc = " \\param[out]   ratio: the corrected ratio from the calibration"]
+    #[doc = " \\param[out]   angle: the target's tilt angle"]
+    #[doc = " \\param[in]    callback: Optional callback for update progress notifications, the progress value is normailzed to 1"]
+    #[doc = " \\return       New calibration table"]
+    pub fn rs2_run_focal_length_calibration_cpp(
+        device: *mut rs2_device,
+        left_queue: *mut rs2_frame_queue,
+        right_queue: *mut rs2_frame_queue,
+        target_width: f32,
+        target_height: f32,
+        adjust_both_sides: ::std::os::raw::c_int,
+        ratio: *mut f32,
+        angle: *mut f32,
+        progress_callback: *mut rs2_update_progress_callback,
+        error: *mut *mut rs2_error,
+    ) -> *const rs2_raw_data_buffer;
+}
+extern "C" {
+    #[doc = "  Run target-based focal length calibration"]
+    #[doc = " \\param[in]    device: device to calibrate"]
+    #[doc = " \\param[in]    left_queue: container for left IR frames with resoluton of  1280x720 and the target in the center of 320x240 pixels ROI."]
+    #[doc = " \\param[in]    right_queue: container for right IR frames with resoluton of  1280x720 and the target in the center of 320x240 pixels ROI"]
+    #[doc = " \\param[in]    target_width: the rectangle width in mm on the target"]
+    #[doc = " \\param[in]    target_height: the rectangle height in mm on the target"]
+    #[doc = " \\param[in]    adjust_both_sides: 1 for adjusting both left and right camera calibration tables, and 0 for adjusting right camera calibraion table only"]
+    #[doc = " \\param[out]   ratio: the corrected ratio from the calibration"]
+    #[doc = " \\param[out]   angle: the target's tilt angle"]
+    #[doc = " \\param[in]    callback: Optional callback for update progress notifications, the progress value is normailzed to 1"]
+    #[doc = " \\param[in]    client_data: Optional client data for the callback"]
+    #[doc = " \\return       New calibration table"]
+    pub fn rs2_run_focal_length_calibration(
+        device: *mut rs2_device,
+        left_queue: *mut rs2_frame_queue,
+        right_queue: *mut rs2_frame_queue,
+        target_width: f32,
+        target_height: f32,
+        adjust_both_sides: ::std::os::raw::c_int,
+        ratio: *mut f32,
+        angle: *mut f32,
+        callback: rs2_update_progress_callback_ptr,
+        client_data: *mut ::std::os::raw::c_void,
+        error: *mut *mut rs2_error,
+    ) -> *const rs2_raw_data_buffer;
+}
+extern "C" {
+    #[doc = "  Depth-RGB UV-Map calibration. Applicable for D400 cameras"]
+    #[doc = " \\param[in]    device: device to calibrate"]
+    #[doc = " \\param[in]    left_queue: the frame queue for left IR frames with resoluton of 1280x720 and the target captured in the center of 320x240 pixels ROI."]
+    #[doc = " \\param[in]    color_queue: the frame queue for RGB frames with resoluton of 1280x720 and the target in the center of 320x240 pixels ROI"]
+    #[doc = " \\param[in]    depth_queue: the frame queue for Depth frames with resoluton of 1280x720"]
+    #[doc = " \\param[in]    py_px_only: 1 for calibrating color camera py and px only, 1 for calibrating color camera py, px, fy, and fx."]
+    #[doc = " \\param[out]   health: The four health check numbers in order of px, py, fx, fy for the calibration"]
+    #[doc = " \\param[in]    health_size: number of health check numbers, which is 4 by default"]
+    #[doc = " \\param[in]    callback: Optional callback for update progress notifications, the progress value is normailzed to 1"]
+    #[doc = " \\return       New calibration table"]
+    pub fn rs2_run_uv_map_calibration_cpp(
+        device: *mut rs2_device,
+        left_queue: *mut rs2_frame_queue,
+        color_queue: *mut rs2_frame_queue,
+        depth_queue: *mut rs2_frame_queue,
+        py_px_only: ::std::os::raw::c_int,
+        health: *mut f32,
+        health_size: ::std::os::raw::c_int,
+        progress_callback: *mut rs2_update_progress_callback,
+        error: *mut *mut rs2_error,
+    ) -> *const rs2_raw_data_buffer;
+}
+extern "C" {
+    #[doc = "  Depth-RGB UV-Map calibration. Applicable for D400 cameras"]
+    #[doc = " \\param[in]    device: device to calibrate"]
+    #[doc = " \\param[in]    left_queue: the frame queue for left IR frames with resoluton of 1280x720 and the target captured in the center of 320x240 pixels ROI."]
+    #[doc = " \\param[in]    color_queue: the frame queue for RGB frames with resoluton of 1280x720 and the target in the center of 320x240 pixels ROI"]
+    #[doc = " \\param[in]    depth_queue: the frame queue for Depth frames with resoluton of 1280x720"]
+    #[doc = " \\param[in]    py_px_only: 1 for calibrating color camera py and px only, 1 for calibrating color camera py, px, fy, and fx."]
+    #[doc = " \\param[out]   health: The four health check numbers in order of px, py, fx, fy for the calibration"]
+    #[doc = " \\param[in]    health_size: number of health check numbers, which is 4 by default"]
+    #[doc = " \\param[in]    callback: Optional callback for update progress notifications, the progress value is normailzed to 1"]
+    #[doc = " \\param[in]    client_data: Optional client data for the callback"]
+    #[doc = " \\return       New calibration table"]
+    pub fn rs2_run_uv_map_calibration(
+        device: *mut rs2_device,
+        left_queue: *mut rs2_frame_queue,
+        color_queue: *mut rs2_frame_queue,
+        depth_queue: *mut rs2_frame_queue,
+        py_px_only: ::std::os::raw::c_int,
+        health: *mut f32,
+        health_size: ::std::os::raw::c_int,
+        callback: rs2_update_progress_callback_ptr,
+        client_data: *mut ::std::os::raw::c_void,
+        error: *mut *mut rs2_error,
+    ) -> *const rs2_raw_data_buffer;
+}
+extern "C" {
+    #[doc = " Calculate Z for calibration target - distance to the target's plane"]
+    #[doc = " \\param[in]    queue1-3: A frame queue of raw images used to calculate and extract the distance to a predefined target pattern."]
+    #[doc = " For D400 the indexes 1-3 correspond to Left IR, Right IR and Depth with only the Left IR being used"]
+    #[doc = " \\param[in]    target_width: Expected target's horizontal dimension in mm"]
+    #[doc = " \\param[in]    target_height: Expected target's vertical dimension in mm"]
+    #[doc = " \\param[in]    callback: Optional callback for reporting progress status"]
+    #[doc = " \\return       Calculated distance (Z) to target in millimeter, or negative number if failed"]
+    pub fn rs2_calculate_target_z_cpp(
+        device: *mut rs2_device,
+        queue1: *mut rs2_frame_queue,
+        queue2: *mut rs2_frame_queue,
+        queue3: *mut rs2_frame_queue,
+        target_width: f32,
+        target_height: f32,
+        callback: *mut rs2_update_progress_callback,
+        error: *mut *mut rs2_error,
+    ) -> f32;
+}
+extern "C" {
+    #[doc = " Calculate Z for calibration target - distance to the target's plane"]
+    #[doc = " \\param[in]    queue1-3: A frame queue of raw images used to calculate and extract the distance to a predefined target pattern."]
+    #[doc = " For D400 the indexes 1-3 correspond to Left IR, Right IR and Depth with only the Left IR being used"]
+    #[doc = " \\param[in]    target_width: Expected target's horizontal dimension in mm"]
+    #[doc = " \\param[in]    target_height: Expected target's vertical dimension in mm"]
+    #[doc = " \\param[in]    callback: Optional callback for reporting progress status"]
+    #[doc = " \\param[in]    client_data: Optional client data for the callback"]
+    #[doc = " \\return       Calculated distance (Z) to target in millimeter, or negative number if failed"]
+    pub fn rs2_calculate_target_z(
+        device: *mut rs2_device,
+        queue1: *mut rs2_frame_queue,
+        queue2: *mut rs2_frame_queue,
+        queue3: *mut rs2_frame_queue,
+        target_width: f32,
+        target_height: f32,
+        progress_callback: rs2_update_progress_callback_ptr,
+        client_data: *mut ::std::os::raw::c_void,
+        error: *mut *mut rs2_error,
+    ) -> f32;
 }
 #[doc = "< Frame timestamp was measured in relation to the camera clock"]
 pub const rs2_timestamp_domain_RS2_TIMESTAMP_DOMAIN_HARDWARE_CLOCK: rs2_timestamp_domain = 0;
@@ -2808,8 +2993,14 @@ extern "C" {
 #[doc = "< Flat rectangle with vertices as the centers of Gaussian dots"]
 pub const rs2_calib_target_type_RS2_CALIB_TARGET_RECT_GAUSSIAN_DOT_VERTICES: rs2_calib_target_type =
     0;
+#[doc = "< Flat rectangle with vertices as the centers of Gaussian dots with target inside the ROI"]
+pub const rs2_calib_target_type_RS2_CALIB_TARGET_ROI_RECT_GAUSSIAN_DOT_VERTICES:
+    rs2_calib_target_type = 1;
+#[doc = "< Positions of vertices as the centers of Gaussian dots with target inside the ROI"]
+pub const rs2_calib_target_type_RS2_CALIB_TARGET_POS_GAUSSIAN_DOT_VERTICES: rs2_calib_target_type =
+    2;
 #[doc = "< Number of enumeration values. Not a valid input: intended to be used in for-loops."]
-pub const rs2_calib_target_type_RS2_CALIB_TARGET_COUNT: rs2_calib_target_type = 1;
+pub const rs2_calib_target_type_RS2_CALIB_TARGET_COUNT: rs2_calib_target_type = 3;
 #[doc = " \\brief Calibration target type."]
 pub type rs2_calib_target_type = ::std::os::raw::c_uint;
 extern "C" {
@@ -3157,8 +3348,10 @@ extern "C" {
     #[doc = " Extract the target dimensions on the specific target"]
     #[doc = " \\param[in] frame            Left or right camera frame of specified size based on the target type"]
     #[doc = " \\param[in] calib_type       Calibration target type"]
-    #[doc = " \\param[in] target_dims_size Target dimension array size"]
-    #[doc = " \\param[out] target_dims     The array to hold the result target dimensions calculated. For type RS2_CALIB_TARGET_RECT_GAUSSIAN_DOT_VERTICES, the four rectangle side sizes in pixels with the order of top, bottom, left, and right"]
+    #[doc = " \\param[out] target_dims     The array to hold the result target dimensions calculated."]
+    #[doc = "For type RS2_CALIB_TARGET_RECT_GAUSSIAN_DOT_VERTICES and RS2_CALIB_TARGET_ROI_RECT_GAUSSIAN_DOT_VERTICES, the four rectangle side sizes in pixels with the order of top, bottom, left, and right"]
+    #[doc = "For type RS2_CALIB_TARGET_POS_GAUSSIAN_DOT_VERTICES, the four vertices coordinates in pixels with the order of top, bottom, left, and right"]
+    #[doc = " \\param[in] target_dims_size Target dimension array size. 4 for RS2_CALIB_TARGET_RECT_GAUSSIAN_DOT_VERTICES and 8 for RS2_CALIB_TARGET_POS_GAUSSIAN_DOT_VERTICES."]
     #[doc = " \\param[out] error           If non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
     pub fn rs2_extract_target_dimensions(
         frame: *const rs2_frame,
@@ -3348,8 +3541,16 @@ pub const rs2_option_RS2_OPTION_AUTO_GAIN_LIMIT: rs2_option = 86;
 pub const rs2_option_RS2_OPTION_AUTO_RX_SENSITIVITY: rs2_option = 87;
 #[doc = "<changes the transmitter frequencies increasing effective range over sharpness."]
 pub const rs2_option_RS2_OPTION_TRANSMITTER_FREQUENCY: rs2_option = 88;
+#[doc = "< Enables vertical binning which increases the maximal sensed distance."]
+pub const rs2_option_RS2_OPTION_VERTICAL_BINNING: rs2_option = 89;
+#[doc = "< Control receiver sensitivity to incoming light, both projected and ambient (same as APD on L515)."]
+pub const rs2_option_RS2_OPTION_RECEIVER_SENSITIVITY: rs2_option = 90;
+#[doc = "< Enable / disable color image auto-exposure"]
+pub const rs2_option_RS2_OPTION_AUTO_EXPOSURE_LIMIT_TOGGLE: rs2_option = 91;
+#[doc = "< Enable / disable color image auto-gain"]
+pub const rs2_option_RS2_OPTION_AUTO_GAIN_LIMIT_TOGGLE: rs2_option = 92;
 #[doc = "< Number of enumeration values. Not a valid input: intended to be used in for-loops."]
-pub const rs2_option_RS2_OPTION_COUNT: rs2_option = 89;
+pub const rs2_option_RS2_OPTION_COUNT: rs2_option = 93;
 #[doc = " \\brief Defines general configuration controls."]
 #[doc = "These can generally be mapped to camera UVC controls, and can be set / queried at any time unless stated otherwise."]
 pub type rs2_option = ::std::os::raw::c_uint;
@@ -3637,6 +3838,18 @@ extern "C" {
     pub fn rs2_create_yuy_decoder(error: *mut *mut rs2_error) -> *mut rs2_processing_block;
 }
 extern "C" {
+    #[doc = " Creates y411 decoder processing block. This block accepts raw y411 frames and outputs frames in RGB8."]
+    #[doc = "     https://www.fourcc.org/pixel-format/yuv-y411/"]
+    #[doc = " Y411 is disguised as NV12 to allow Linux compatibility. Both are 12bpp encodings that allow high-resolution"]
+    #[doc = " modes in the camera to still fit within the USB3 limits (YUY wasn't enough)."]
+    #[doc = ""]
+    #[doc = " The SDK will automatically try to use SSE2 and AVX instructions and CUDA where available to get"]
+    #[doc = " best performance. Other implementations (using GLSL, OpenCL, Neon and NCS) should follow."]
+    #[doc = ""]
+    #[doc = " \\param[out] error  if non-null, receives any error that occurs during this call, otherwise, errors are ignored"]
+    pub fn rs2_create_y411_decoder(error: *mut *mut rs2_error) -> *mut rs2_processing_block;
+}
+extern "C" {
     #[doc = " Creates depth thresholding processing block"]
     #[doc = " By controlling min and max options on the block, one could filter out depth values"]
     #[doc = " that are either too large or too small, as a software post-processing step"]
@@ -3760,6 +3973,15 @@ extern "C" {
     #[doc = " deletes frame queue and releases all frames inside it"]
     #[doc = " \\param[in] queue queue to delete"]
     pub fn rs2_delete_frame_queue(queue: *mut rs2_frame_queue);
+}
+extern "C" {
+    #[doc = " queries the number of frames"]
+    #[doc = " \\param[in] queue to delete"]
+    #[doc = " \\returns the number of frames currently stored in queue"]
+    pub fn rs2_frame_queue_size(
+        queue: *mut rs2_frame_queue,
+        error: *mut *mut rs2_error,
+    ) -> ::std::os::raw::c_int;
 }
 extern "C" {
     #[doc = " wait until new frame becomes available in the queue and dequeue it"]

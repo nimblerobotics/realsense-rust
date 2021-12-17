@@ -248,11 +248,11 @@ fn l500_streams_check_supported_but_ignored_sensor_options() {
                 // Check that the Options we wanted to set are
                 // 1. Theoretically supported by the sensor, but
                 // 2. Actually discarded when set.
-                if options_ignored.contains_key(&option) {
+                if options_ignored.contains_key(option) {
                     assert!(sensor.supports_option(*option));
                     assert_ne!(
                         sensor.get_option(*option),
-                        *options_ignored.get(&option).unwrap()
+                        *options_ignored.get(option).unwrap()
                     );
                 }
                 // If we get here, it means that the option should actually set successfully. Fail if it's not.

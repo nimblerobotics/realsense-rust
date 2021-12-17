@@ -1,31 +1,108 @@
+//! # realsense-sys
+//!
+//! Generate and use RealSense C library bindings as a Rust crate. This crate is used as a base layer in the more
+//! user-friendly [realsense-rust](https://gitlab.com/tangram-vision-oss/realsense-rust) crate; we recommend use of
+//! realsense-rust if possible in order to better maintain Rust memory safety.
+//!
+//! Compatible with RealSense SDK v2.0 and up.
+//!
+//! **Default bindings are for librealsense version: 2.50.0**
+//!
+//! ## Usage
+//!
+//! This crate finds and links the RealSense SDK. Though one can use the generated bindings directly, this crate is meant as
+//! a base layer for [realsense-rust](https://gitlab.com/tangram-vision-oss/realsense-rust).
+//!
+//! To use this crate, add this line in your `Cargo.toml`.
+//!
+//! ```toml
+//! realsense-sys = "<current version number>"
+//! ```
+//!
+//! ## Regenerating the API Bindings
+//!
+//! Bindgen relies on clang to generate new FFI bindings. See the OS Use Notes below for more.
+//!
+//! _Non-Linux users_: The current bindings are formatted for Linux. Users on systems other than Linux must run with the
+//! `buildtime-bindgen` feature to reformat the bindings. See more notes for your platform below.
+//!
+//! _Backwards compatibility_: If you're using an older librealsense version, you may enable the `buildtime-bindgen` feature
+//! to re-generate the bindings. We make no claims of backwards compatibility; good luck.
+//!
+//! With all of that said: Run the following to regenerate the realsense2 SDK bindings:
+//!
+//! `cargo build --features buildtime-bindgen`
+//!
+//! # OS Use Notes
+//!
+//! ## Linux
+//!
+//! You can install Clang using the following command:
+//!
+//! `sudo apt install libclang-dev clang`
+//!
+//! If the realsense2 SDK is installed, pkg-config will detect the [realsense2.pc](./realsense2.pc) config file automatically. This will load
+//! the necessary headers and libraries.
+//!
+//! ## Windows
+//!
+//! **NOTE**: The current bindings are formatted for Linux. Users must run with the `buildtime-bindgen` feature active to
+//! reformat the bindings for Windows platforms.
+//!
+//! This installation process assumes that the RealSense SDK was installed through the .exe wizard downloadable from [the
+//! librealsense asset page](https://github.com/IntelRealSense/librealsense/releases/tag/v2.47.0). This process will install
+//! the SDK in `C:/Program Files (x86)/Intel RealSense SDK 2.0`. If your installation is in another place, modify the
+//! `prefix` line in [realsense2.pc](./realsense2.pc) to the right path.
+//!
+//! ### Install Pkg-config and Clang
+//!
+//! Install pkg-config via Chocolatey:
+//!
+//! 1. https://chocolatey.org/install (if not already on the system)
+//! 2. `choco install pkgconfiglite`
+//! 3. `choco install llvm` for bindgen (if not already installed)
+//!
+//! ### Guide Pkg-config to realsense2.pc
+//!
+//! Set the pkg-config path in Powershell to the realsense-sys directory. One can do this in two ways:
+//!
+//! **First Option: Modify pkg-config's environment variables**
+//!
+//! To do this, run
+//!
+//! `$Env:PKG_CONFIG_PATH="C:\Users\< path_to_repo >\realsense-rust\realsense-sys\"`
+//!
+//! This will help pkg-config find the [realsense2.pc](./realsense2.pc) file located in this directory. This file tells pkg-config where to
+//! locate the headers and libraries necessary for RealSense operation. The Windows wizard does not provide this file, so we
+//! provide it ourselves.
+//!
+//! It's a good idea to set the `PKG_CONFIG_PATH` Environment Variable globally as well via the System Properties. _BUT
+//! NOTE_: Environment Variables set through the Windows System Properties will not apply until the host machine is power
+//! cycled. Yep. That's a thing.
+//!
+//! **Second Option: Add [realsense2.pc](./realsense2.pc) to pkg-config's search directory**
+//!
+//! Run the following command...
+//!
+//! `pkg-config --variable pc_path pkg-config`
+//!
+//! ...to identify the directory (or directories) that pkg-config uses to find \*.pc files. Copy [realsense2.pc](./realsense2.pc) to that
+//! directory. Boom, done.
+//!
+//! ---
+//!
+//! # Architecture Notes
+//!
 //! This crate provides a bindgen mapping to the low-level C-API of librealsense2.
 //!
 //! In that respect, it is fairly straightforward in how realsense-sys maps types from the C-API to
 //! Rust, as nothing particularly unique is done other than running `bindgen` to generate the
 //! bindings.
 //!
-//! # Getting started
-//!
-//! This library is probably not terribly useful on its own, and is meant to be paired with the
-//! high-level realsense-rust. However, if you're just looking for your own low-level unsafe
-//! wrapper, then realsense-sys is what you want! You can get started by including the following in
-//! your `Cargo.toml`:
-//!
-//! ```text
-//! [dependencies]
-//! realsense-rust = "0.5.0"
-//! ```
-//!
-//! followed by this `use` statement in your code:
-//!
-//! ```no_run
-//! use realsense_sys as sys;
-//! ```
-//!
 //! The `sys` alias is used extensively throughout the realsense-rust crate, so you'll often see
 //! code of the form `sys::rs2_XXX`.
 //!
-//! # Understanding lifetimes
+//! ## Understanding lifetimes
 //!
 //! This library is generated by using `bindgen` on a set of C headers, usually located at
 //! `/usr/include/librealsense2/rs.h` (or wherever you installed librealsense2). Inherently, this
@@ -64,15 +141,9 @@
 //! realsense-rust wrapper, which attempts to abstract over these and provide a high-level,
 //! Rust-native API that avoids unsafe code.
 //!
-//! # Regenerating bindings
+//! # License
 //!
-//! The bindings should be uniquely generated for every new release of librealsense2. Currently,
-//! the bindings in this crate are compatible with librealsense2 version 2.41.0.
-//!
-//! If you want to regenerate the bindings for your version of realsense, enable the
-//! buildtime-bindgen feature of the crate. Note that in general this can break things if the API
-//! for your version of librealsense2 is different with regards to what the realsense-rust crate is
-//! expecting.
+//! Apache 2.0. See [LICENSE](LICENSE) file.
 
 // Allow all warnings here -- Bindgen generates this file, we really don't care about individual
 // warnings since we can't really do much about them, we'd have to fix bindgen upstream or

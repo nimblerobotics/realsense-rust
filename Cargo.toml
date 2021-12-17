@@ -33,8 +33,9 @@ docs-only = ["realsense-sys/docs-only"]
 anyhow = "1.0"
 num-derive = "0.3"
 num-traits = "0.2"
-realsense-sys = { version = "2.47.0", path = "realsense-sys" }
+realsense-sys = { version = "2.50.0", path = "realsense-sys" }
 thiserror = "1.0"
+
 
 [dev-dependencies.opencv]
 version = "0.53"

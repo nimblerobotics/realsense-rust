@@ -121,7 +121,7 @@ pub fn main() -> Result<()> {
 
         if !color_frames.is_empty() {
             let color_frame = &color_frames[0];
-            let color_mat = mat_from_color(&color_frame);
+            let color_mat = mat_from_color(color_frame);
             highgui::imshow(color_window, &color_mat).unwrap();
             if highgui::wait_key(2)? != -1 {
                 break;
@@ -130,7 +130,7 @@ pub fn main() -> Result<()> {
         if !depth_frames.is_empty() {
             let depth_frame = &depth_frames[0];
 
-            let depth_mat = mat_from_depth16(&depth_frame);
+            let depth_mat = mat_from_depth16(depth_frame);
             let colorized_depth = colorized_mat(&depth_mat);
 
             highgui::imshow(depth_window, &colorized_depth).unwrap();
