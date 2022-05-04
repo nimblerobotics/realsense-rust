@@ -5,6 +5,10 @@ default:
     # Update rust in case the latest version isn't built into our docker image.
     - rustup update stable
 
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+
 stages:
   - test
   - doc
