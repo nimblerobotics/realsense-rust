@@ -69,6 +69,8 @@ pub struct ImageFrame<Kind> {
     timestamp: f64,
     /// The RealSense time domain from which the timestamp is derived.
     timestamp_domain: Rs2TimestampDomain,
+    /// The frame number.
+    frame_number: u64,
     /// The Stream Profile that created the frame.
     frame_stream_profile: StreamProfile,
     /// The size in bytes of the data contained in the frame.
@@ -212,6 +214,9 @@ impl<K> TryFrom<NonNull<sys::rs2_frame>> for ImageFrame<K> {
                 sys::rs2_get_frame_timestamp_domain(frame_ptr.as_ptr(), &mut err);
             check_rs2_error!(err, FrameConstructionError::CouldNotGetTimestampDomain)?;
 
+            let frame_number = sys::rs2_get_frame_number(frame_ptr.as_ptr(), &mut err);
+            check_rs2_error!(err, FrameConstructionError::CouldNotGetFrameNumber)?;
+
             let profile_ptr = sys::rs2_get_frame_stream_profile(frame_ptr.as_ptr(), &mut err);
             check_rs2_error!(err, FrameConstructionError::CouldNotGetFrameStreamProfile)?;
 
@@ -237,6 +242,7 @@ impl<K> TryFrom<NonNull<sys::rs2_frame>> for ImageFrame<K> {
                 bits_per_pixel: bits_per_pixel as usize,
                 timestamp,
                 timestamp_domain: Rs2TimestampDomain::from_i32(timestamp_domain as i32).unwrap(),
+                frame_number,
                 frame_stream_profile: profile,
                 data_size_in_bytes: size as usize,
                 data: nonnull_data_ptr,
@@ -352,6 +358,10 @@ impl<T> FrameEx for ImageFrame<T> {
 
     fn timestamp_domain(&self) -> Rs2TimestampDomain {
         self.timestamp_domain
+    }
+
+    fn frame_number(&self) -> u64 {
+        self.frame_number
     }
 
     fn metadata(&self, metadata_kind: Rs2FrameMetadata) -> Option<std::os::raw::c_longlong> {

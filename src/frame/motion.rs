@@ -41,6 +41,8 @@ pub struct MotionFrame<Kind> {
     timestamp: f64,
     /// The RealSense time domain from which the timestamp is derived.
     timestamp_domain: Rs2TimestampDomain,
+    /// The frame number.
+    frame_number: u64,
     /// The Stream Profile that created the frame.
     frame_stream_profile: StreamProfile,
     /// The motion data held in this Motion Frame. Motion data is represented as a
@@ -130,6 +132,9 @@ impl<K> TryFrom<NonNull<sys::rs2_frame>> for MotionFrame<K> {
                 sys::rs2_get_frame_timestamp_domain(frame_ptr.as_ptr(), &mut err);
             check_rs2_error!(err, FrameConstructionError::CouldNotGetTimestampDomain)?;
 
+            let frame_number = sys::rs2_get_frame_number(frame_ptr.as_ptr(), &mut err);
+            check_rs2_error!(err, FrameConstructionError::CouldNotGetFrameNumber)?;
+
             let profile_ptr = sys::rs2_get_frame_stream_profile(frame_ptr.as_ptr(), &mut err);
             check_rs2_error!(err, FrameConstructionError::CouldNotGetFrameStreamProfile)?;
 
@@ -153,6 +158,7 @@ impl<K> TryFrom<NonNull<sys::rs2_frame>> for MotionFrame<K> {
                 frame_ptr,
                 timestamp,
                 timestamp_domain: Rs2TimestampDomain::from_i32(timestamp_domain as i32).unwrap(),
+                frame_number,
                 frame_stream_profile: profile,
                 motion: [motion_raw[0], motion_raw[1], motion_raw[2]],
                 should_drop: true,
@@ -182,6 +188,10 @@ impl<K> FrameEx for MotionFrame<K> {
 
     fn timestamp_domain(&self) -> Rs2TimestampDomain {
         self.timestamp_domain
+    }
+
+    fn frame_number(&self) -> u64 {
+        self.frame_number
     }
 
     fn metadata(&self, metadata_kind: Rs2FrameMetadata) -> Option<std::os::raw::c_longlong> {

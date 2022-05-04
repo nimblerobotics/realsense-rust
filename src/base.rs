@@ -158,3 +158,16 @@ impl Rs2Extrinsics {
 }
 
 unsafe impl Send for Rs2Extrinsics {}
+
+/// Region of interest for the auto exposure algorithm.
+#[derive(Debug, Clone)]
+pub struct Rs2Roi {
+    /// Left coordinate of the region of interest.
+    pub min_x: i32,
+    /// Top coordinate of the region of interest.
+    pub min_y: i32,
+    /// Right coordinate of the region of interest.
+    pub max_x: i32,
+    /// Bottom coordinate of the region of interest.
+    pub max_y: i32,
+}

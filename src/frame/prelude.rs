@@ -39,6 +39,9 @@ pub enum FrameConstructionError {
     /// clock its time is relative.
     #[error("Could not get timestamp domain. Type: {0}; Reason: {1}")]
     CouldNotGetTimestampDomain(Rs2Exception, String),
+    /// Could not get the frame number.
+    #[error("Could not get frame number. Type: {0}; Reason: {1}")]
+    CouldNotGetFrameNumber(Rs2Exception, String),
     /// Could not get the stream profile that describes the frame.
     #[error("Could not get frame stream profile. Type: {0}; Reason: {1}")]
     CouldNotGetFrameStreamProfile(Rs2Exception, String),
@@ -81,6 +84,9 @@ pub trait FrameEx {
 
     /// Get the sensor associated with the frame.
     fn sensor(&self) -> Result<Sensor>;
+
+    /// Get the frame number.
+    fn frame_number(&self) -> u64;
 
     /// Get the frame timestamp.
     fn timestamp(&self) -> f64;

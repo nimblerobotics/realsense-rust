@@ -3,10 +3,11 @@
 #![cfg(feature = "test-single-device")]
 
 use realsense_rust::{
+    base::Rs2Roi,
     config::Config,
     context::Context,
-    frame::{ColorFrame, DepthFrame, InfraredFrame},
-    kind::{Rs2CameraInfo, Rs2Format, Rs2Option, Rs2ProductLine, Rs2StreamKind},
+    frame::{ColorFrame, DepthFrame, FrameEx, InfraredFrame},
+    kind::{Rs2CameraInfo, Rs2Extension, Rs2Format, Rs2Option, Rs2ProductLine, Rs2StreamKind},
     pipeline::InactivePipeline,
 };
 use std::{
@@ -282,5 +283,106 @@ fn d400_streams_check_supported_but_ignored_sensor_options() {
                 }
             }
         }
+    }
+}
+
+/// After the startup-phase the frame number must increase by one for each new frameset as long
+/// as only one stream is active and the pipeline is queried for new framesets faster than the
+/// framerate.
+#[test]
+fn d400_frame_numbers_increase() {
+    let context = Context::new().unwrap();
+
+    let mut queryable_set = HashSet::new();
+    queryable_set.insert(Rs2ProductLine::D400);
+
+    let devices = context.query_devices(queryable_set);
+
+    if let Some(device) = devices.get(0) {
+        let serial = device.info(Rs2CameraInfo::SerialNumber).unwrap();
+        let mut config = Config::new();
+
+        config
+            .enable_device_from_serial(serial)
+            .unwrap()
+            .disable_all_streams()
+            .unwrap()
+            .enable_stream(Rs2StreamKind::Depth, None, 0, 0, Rs2Format::Z16, 30)
+            .unwrap();
+
+        let pipeline = InactivePipeline::try_from(&context).unwrap();
+        let mut pipeline = pipeline.start(Some(config)).unwrap();
+
+        // Startup-phase: On startup the RealSense often drops some frames. Skip those.
+        for _ in 0..5 {
+            let _ = pipeline.wait(None).unwrap();
+        }
+
+        let mut last_frame_number: Option<u64> = None;
+        for _ in 0..5 {
+            let frameset = pipeline.wait(None).unwrap();
+            let depth_frames = frameset.frames_of_type::<DepthFrame>();
+            let frame_number = depth_frames.first().unwrap().frame_number();
+            if let Some(last_frame_number) = last_frame_number {
+                assert_eq!(last_frame_number + 1, frame_number);
+            }
+            last_frame_number = Some(frame_number);
+        }
+    }
+}
+
+/// Verify that the auto exposure's region of interest can be read and written.
+#[test]
+fn d400_region_of_interest_accessible() {
+    let context = Context::new().unwrap();
+
+    let mut queryable_set = HashSet::new();
+    queryable_set.insert(Rs2ProductLine::D400);
+
+    let devices = context.query_devices(queryable_set);
+
+    if let Some(device) = devices.get(0) {
+        let serial = device.info(Rs2CameraInfo::SerialNumber).unwrap();
+        let mut config = Config::new();
+
+        config
+            .enable_device_from_serial(serial)
+            .unwrap()
+            .disable_all_streams()
+            .unwrap()
+            .enable_stream(Rs2StreamKind::Color, None, 0, 0, Rs2Format::Rgba8, 30)
+            .unwrap();
+
+        let pipeline = InactivePipeline::try_from(&context).unwrap();
+        let mut pipeline = pipeline.start(Some(config)).unwrap();
+
+        // Wait until a frame is received to make sure the camera is properly initialized.
+        let _ = pipeline.wait(None).unwrap();
+
+        let profile = pipeline.profile();
+        let intrinsics = profile.streams().first().unwrap().intrinsics().unwrap();
+        let width = intrinsics.width() as i32;
+        let height = intrinsics.height() as i32;
+
+        let sensors = profile.device().sensors();
+        let mut color_sensor = sensors
+            .into_iter()
+            .find(|sensor| sensor.extension() == Rs2Extension::ColorSensor)
+            .unwrap();
+        color_sensor
+            .set_option(Rs2Option::EnableAutoExposure, 1.0)
+            .unwrap();
+
+        let old_roi = color_sensor.get_region_of_interest().unwrap();
+        assert!(0 <= old_roi.min_x && old_roi.min_x <= old_roi.max_x && old_roi.max_x < width);
+        assert!(0 <= old_roi.min_y && old_roi.min_y <= old_roi.max_x && old_roi.max_y < height);
+
+        let roi = Rs2Roi {
+            min_x: width / 8,
+            min_y: height / 8,
+            max_x: width * 7 / 8,
+            max_y: height * 7 / 8,
+        };
+        color_sensor.set_region_of_interest(roi).unwrap();
     }
 }

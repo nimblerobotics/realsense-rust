@@ -12,6 +12,7 @@
 //! [`Device`] |-> [`Sensor`] |-> [`StreamProfile`]
 
 use crate::{
+    base::Rs2Roi,
     check_rs2_error,
     device::{Device, DeviceConstructionError},
     kind::{
@@ -40,6 +41,18 @@ pub enum SensorConstructionError {
     /// Could not get the correct sensor from the sensor list.
     #[error("Could not get correct sensor from sensor list. Type: {0}; Reason: {1}")]
     CouldNotGetSensorFromList(Rs2Exception, String),
+}
+
+/// Type describing errors that can occur when trying to set the region of interest of a sensor.
+///
+/// Follows the standard pattern of errors where the enum variant describes what the low-level code
+/// was attempting to do while the string carried alongside describes the underlying error message
+/// from any C++ exceptions that occur.
+#[derive(Error, Debug)]
+pub enum RoiSetError {
+    /// Could not set region of interest for sensor.
+    #[error("Could not set region of interest for sensor. Type: {0}; Reason: {1}")]
+    CouldNotSetRoi(Rs2Exception, String),
 }
 
 /// Type for holding sensor-related data.
@@ -410,6 +423,65 @@ impl Sensor {
                 sys::rs2_free_error(err);
                 false
             }
+        }
+    }
+
+    /// Gets the auto exposure's region of interest for the sensor.
+    ///
+    /// Returns the region of interest for the auto exposure or None
+    /// if this isn't available.
+    pub fn get_region_of_interest(&self) -> Option<Rs2Roi> {
+        unsafe {
+            let mut err = std::ptr::null_mut::<sys::rs2_error>();
+            let mut roi = Rs2Roi {
+                min_x: 0,
+                min_y: 0,
+                max_x: 0,
+                max_y: 0,
+            };
+            sys::rs2_get_region_of_interest(
+                self.sensor_ptr.as_ptr(),
+                &mut roi.min_x,
+                &mut roi.min_y,
+                &mut roi.max_x,
+                &mut roi.max_y,
+                &mut err,
+            );
+            if err.as_ref().is_none() {
+                Some(roi)
+            } else {
+                sys::rs2_free_error(err);
+                None
+            }
+        }
+    }
+
+    /// Sets the auto exposure's region of interest to `roi` for the sensor.
+    ///
+    /// Returns null tuple if the region of interest was set successfully, otherwise an error.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RoiSetError::CouldNotSetRoi`] if setting the region of interest failed.
+    ///
+    /// # Known issues
+    ///
+    /// This command can fail directly after the pipeline start. This is a bug in librealsense.
+    /// Either wait for the first Frameset to be received or repeat the command in a loop
+    /// with a delay until it succeeds as suggested by Intel.
+    /// Issue at librealsense: https://github.com/IntelRealSense/librealsense/issues/8004
+    pub fn set_region_of_interest(&mut self, roi: Rs2Roi) -> Result<(), RoiSetError> {
+        unsafe {
+            let mut err = std::ptr::null_mut::<sys::rs2_error>();
+            sys::rs2_set_region_of_interest(
+                self.sensor_ptr.as_ptr(),
+                roi.min_x,
+                roi.min_y,
+                roi.max_x,
+                roi.max_y,
+                &mut err,
+            );
+            check_rs2_error!(err, RoiSetError::CouldNotSetRoi)
         }
     }
 }

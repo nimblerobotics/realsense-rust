@@ -31,6 +31,8 @@ pub struct PointsFrame {
     timestamp: f64,
     /// The RealSense time domain from which the timestamp is derived.
     timestamp_domain: Rs2TimestampDomain,
+    /// The frame number.
+    frame_number: u64,
     /// The Stream Profile that created the frame.
     frame_stream_profile: StreamProfile,
     /// The number of points represented in the Points frame.
@@ -79,6 +81,10 @@ impl FrameEx for PointsFrame {
 
     fn timestamp_domain(&self) -> Rs2TimestampDomain {
         self.timestamp_domain
+    }
+
+    fn frame_number(&self) -> u64 {
+        self.frame_number
     }
 
     fn metadata(&self, metadata_kind: Rs2FrameMetadata) -> Option<std::os::raw::c_longlong> {
@@ -178,6 +184,9 @@ impl std::convert::TryFrom<NonNull<sys::rs2_frame>> for PointsFrame {
                 sys::rs2_get_frame_timestamp_domain(frame_ptr.as_ptr(), &mut err);
             check_rs2_error!(err, FrameConstructionError::CouldNotGetTimestampDomain)?;
 
+            let frame_number = sys::rs2_get_frame_number(frame_ptr.as_ptr(), &mut err);
+            check_rs2_error!(err, FrameConstructionError::CouldNotGetFrameNumber)?;
+
             let profile_ptr = sys::rs2_get_frame_stream_profile(frame_ptr.as_ptr(), &mut err);
             check_rs2_error!(err, FrameConstructionError::CouldNotGetFrameStreamProfile)?;
 
@@ -198,6 +207,7 @@ impl std::convert::TryFrom<NonNull<sys::rs2_frame>> for PointsFrame {
                 frame_ptr,
                 timestamp,
                 timestamp_domain: Rs2TimestampDomain::from_i32(timestamp_domain as i32).unwrap(),
+                frame_number,
                 frame_stream_profile: profile,
                 num_points: num_points as usize,
                 vertices_data_ptr: NonNull::new(vertices_ptr).unwrap(),
