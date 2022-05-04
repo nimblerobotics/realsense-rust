@@ -5,6 +5,13 @@ default:
     # Update rust in case the latest version isn't built into our docker image.
     - rustup update stable
 
+# Run pipeline for MRs and main branch
+# https://docs.gitlab.com/ee/ci/yaml/workflow.html#switch-between-branch-pipelines-and-merge-request-pipelines
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
 stages:
   - test
   - doc
