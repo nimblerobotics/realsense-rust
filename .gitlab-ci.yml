@@ -31,7 +31,7 @@ test:
     - free -m
     - df -h
     - lscpu
-    - timeout 10m strace --output=strace_cargo_test.txt cargo test --features buildtime-bindgen --verbose
+    - timeout 10m strace --follow-forks --output=strace_cargo_test.txt cargo test --features buildtime-bindgen --verbose
     - "false"
   timeout: 20m
   artifacts:
