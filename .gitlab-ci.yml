@@ -28,7 +28,13 @@ test:
     - rustc --version
     - cargo --version
     - apt update && apt install -y strace
-    - strace cargo test --features buildtime-bindgen --verbose
+    - strace cargo test --features buildtime-bindgen --verbose > strace_cargo_test.txt
+  timeout: 5m
+  artifacts:
+    paths:
+      - ./strace_cargo_test.txt
+    when: always
+    expire_in: 1 week
 
 lint:
   stage: test
