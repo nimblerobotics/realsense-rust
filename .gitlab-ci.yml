@@ -31,8 +31,9 @@ test:
     - free -m
     - df -h
     - lscpu
-    - strace --output=strace_cargo_test.txt cargo test --features buildtime-bindgen --verbose
-  timeout: 5m
+    - timeout 5m strace --output=strace_cargo_test.txt cargo test --features buildtime-bindgen --verbose
+    - false
+  timeout: 10m
   artifacts:
     paths:
       - ./strace_cargo_test.txt
