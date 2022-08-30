@@ -28,7 +28,7 @@ fn mat_from_color(color_frame: &ColorFrame) -> core::Mat {
     for (i, rs) in color_frame.iter().enumerate() {
         match rs {
             PixelKind::Bgr8 { b, g, r } => {
-                *color_mat.at_mut::<core::Vec3<u8>>(i as i32).unwrap() = [*b, *g, *r].into();
+                *color_mat.at_mut::<opencv::core::Vec3b>(i as i32).unwrap() = [*b, *g, *r].into();
             }
             _ => panic!("We got our types wrong!"),
         }
@@ -75,7 +75,7 @@ fn colorized_mat(mat: &core::Mat) -> core::Mat {
         255.0,
         core::NORM_MINMAX,
         core::CV_8UC1,
-        &core::no_array().unwrap(),
+        &core::no_array(),
     )
     .unwrap();
 
