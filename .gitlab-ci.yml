@@ -27,7 +27,8 @@ test:
   script:
     - rustc --version
     - cargo --version
-    - cargo test --features buildtime-bindgen --verbose
+    - apt update && apt install -y strace
+    - strace cargo test --features buildtime-bindgen --verbose
 
 lint:
   stage: test
