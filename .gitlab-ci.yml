@@ -28,7 +28,10 @@ test:
     - rustc --version
     - cargo --version
     - apt update && apt install -y strace
-    - strace cargo test --features buildtime-bindgen --verbose --output=strace_cargo_test.txt
+    - free -m
+    - df -h
+    - lscpu
+    - strace --output=strace_cargo_test.txt cargo test --features buildtime-bindgen --verbose
   timeout: 5m
   artifacts:
     paths:
