@@ -27,14 +27,25 @@ test:
   script:
     - rustc --version
     - cargo --version
-    - cargo test --features buildtime-bindgen --verbose
+    - apt update && apt install -y strace
+    - free -m
+    - df -h
+    - lscpu
+    - timeout 10m strace --follow-forks --output=strace_cargo_test.txt cargo test --features buildtime-bindgen --verbose
+    - "false"
+  timeout: 20m
+  artifacts:
+    paths:
+      - ./strace_cargo_test.txt
+    when: always
+    expire_in: 1 week
 
-lint:
-  stage: test
-  script:
-    - rustc --version
-    - cargo --version
-    - cargo clippy --all-targets --features=buildtime-bindgen,test-single-device -- -D warnings
+# lint:
+#   stage: test
+#   script:
+#     - rustc --version
+#     - cargo --version
+#     - cargo clippy --all-targets --features=buildtime-bindgen,test-single-device -- -D warnings
 
 ##### ########## ########## ########## ########## #####
 # DOC STAGE
