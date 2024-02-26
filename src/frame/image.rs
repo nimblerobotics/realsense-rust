@@ -578,6 +578,17 @@ impl<K> ImageFrame<K> {
     }
 }
 
+impl<K> std::ops::Deref for ImageFrame<K> {
+    type Target = [u8];
+
+    fn deref(&self) -> &[u8] {
+        unsafe {
+            let data = self.get_data() as *const std::os::raw::c_void as *const u8;
+            std::slice::from_raw_parts(data, self.get_data_size())
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
