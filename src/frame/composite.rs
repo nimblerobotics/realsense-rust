@@ -18,30 +18,45 @@ use std::{
 #[derive(Debug)]
 pub struct CompositeFrame {
     /// The raw data pointer from the original rs2 frame
-    pub ptr: NonNull<sys::rs2_frame>,
+    frame: Option<NonNull<sys::rs2_frame>>,
 }
+
+unsafe impl Send for CompositeFrame {}
 
 impl Drop for CompositeFrame {
     /// Drop the raw pointer stored with this struct whenever it goes out of scope.
     fn drop(&mut self) {
-        unsafe {
-            sys::rs2_release_frame(self.ptr.as_ptr());
+        if let Some(frame) = self.frame {
+            unsafe {
+                sys::rs2_release_frame(frame.as_ptr());
+            }
         }
     }
 }
 
 impl From<NonNull<sys::rs2_frame>> for CompositeFrame {
-    fn from(frame_ptr: NonNull<sys::rs2_frame>) -> Self {
-        Self { ptr: frame_ptr }
+    fn from(frame: NonNull<sys::rs2_frame>) -> Self {
+        Self { frame: Some(frame) }
     }
 }
 
 impl CompositeFrame {
+    /// Gongyi Added: Notify rs2 Camera to save the frame
+    pub fn keep(&self) {
+        if let Some(f) = self.frame {
+            unsafe {
+                realsense_sys::rs2_keep_frame(f.as_ptr());
+            }
+        }
+        return;
+    }
+
     /// Gets the number of individual frames included in the composite frame.
     pub fn count(&self) -> usize {
         unsafe {
             let mut err: *mut sys::rs2_error = std::ptr::null_mut::<sys::rs2_error>();
-            let count = sys::rs2_embedded_frames_count(self.ptr.as_ptr(), &mut err);
+            let frame = self.frame.as_ref().unwrap();
+            let count = sys::rs2_embedded_frames_count(frame.as_ptr(), &mut err);
             if err.as_ref().is_none() {
                 count as usize
             } else {
@@ -76,9 +91,10 @@ impl CompositeFrame {
         let mut frames = Vec::new();
         for i in 0..self.count() {
             unsafe {
+                let frame = self.frame.as_ref().unwrap();
                 let mut err = std::ptr::null_mut::<sys::rs2_error>();
                 let frame_ptr =
-                    sys::rs2_extract_frame(self.ptr.as_ptr(), i as std::os::raw::c_int, &mut err);
+                    sys::rs2_extract_frame(frame.as_ptr(), i as std::os::raw::c_int, &mut err);
 
                 if err.as_ref().is_some() {
                     sys::rs2_free_error(err);
@@ -115,5 +131,19 @@ impl CompositeFrame {
             }
         }
         frames
+    }
+
+    /// Get (and own) the underlying frame pointer for this frame.
+    ///
+    /// This is primarily useful for passing this frame forward to a processing block or blocks
+    /// (either via frame queue, directly, callback, etc).
+    ///
+    /// # Safety
+    ///
+    /// This does not destroy the underlying frame pointer once self
+    /// goes out of scope. Instead, the program expects that whatever
+    /// object was assigned to by this function now manages the lifetime.
+    pub unsafe fn get_owned_raw(mut self) -> NonNull<sys::rs2_frame> {
+        std::mem::take(&mut self.frame).unwrap()
     }
 }

@@ -511,6 +511,13 @@ impl<K> ImageFrame<K> {
         }
     }
 
+    /// Gongyi Added: Notify rs2 Camera to save the frame
+    pub fn keep(&self) {
+        unsafe {
+            realsense_sys::rs2_keep_frame(self.frame_ptr.as_ptr());
+        }
+    }
+
     /// Get a pixel value from the Video Frame.
     ///
     /// # Safety
