@@ -3,4 +3,6 @@
 pub mod align;
 pub mod decimation;
 pub mod errors;
+pub mod hole_filling;
+pub mod spatial;
 pub mod threshold;
