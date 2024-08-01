@@ -297,6 +297,17 @@ pub enum Rs2Option {
     // Count = sys::rs2_option_RS2_OPTION_COUNT as i32,
 }
 
+/// The enumeration of Rs400 camera visual presets.
+///
+/// The visual presets are recommended sets of option presets for a depth camera. The preset selection
+/// varies between devices and sensors.
+#[repr(i32)]
+#[derive(FromPrimitive, ToPrimitive, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Rs2Rs400VisualPreset {
+    /// High accuracy visual preset.
+    HighAccuracy = sys::rs2_rs400_visual_preset_RS2_RS400_VISUAL_PRESET_HIGH_ACCURACY as i32,
+}
+
 impl Rs2Option {
     /// Get the option as a CStr.
     pub fn to_cstr(self) -> &'static CStr {

@@ -80,7 +80,7 @@ pub use extension::{
 pub use format::Rs2Format;
 pub use frame_metadata::Rs2FrameMetadata;
 pub use hole_filling::HoleFillingMode;
-pub use option::{OptionSetError, Rs2Option, Rs2OptionRange};
+pub use option::{OptionSetError, Rs2Option, Rs2OptionRange, Rs2Rs400VisualPreset};
 pub use persistence_control::PersistenceControl;
 pub use product_line::Rs2ProductLine;
 pub use stream_kind::Rs2StreamKind;
