@@ -6,11 +6,17 @@
 use crate::{
     check_rs2_error,
     frame::{DepthFrame, FrameEx},
+    kind::{OptionSetError, Rs2Option},
     processing_blocks::errors::{ProcessFrameError, ProcessingBlockConstructionError},
 };
 use anyhow::Result;
 use realsense_sys as sys;
-use std::{convert::TryFrom, ptr::NonNull, task::Poll, time::Duration};
+use std::{
+    convert::{TryFrom, TryInto},
+    ptr::NonNull,
+    task::Poll,
+    time::Duration,
+};
 
 /// Processing Block and Frame Queue for spatial filtering a stream to a certain [StreamKind]
 #[derive(Debug, Clone)]
@@ -109,6 +115,96 @@ impl Spatial {
                     NonNull::new(frame).unwrap(),
                 )))
             }
+        }
+    }
+
+    /// Predicate for determining if this processing block supports a given option
+    ///
+    /// Returns true iff the option is supported by this sensor.
+    pub fn supports_option(&self, option: Rs2Option) -> bool {
+        let mut err = std::ptr::null_mut::<sys::rs2_error>();
+        let val = unsafe {
+            sys::rs2_supports_option(
+                self.processing_block.as_ptr().cast::<sys::rs2_options>(),
+                #[allow(clippy::useless_conversion)]
+                (option as i32).try_into().unwrap(),
+                &mut err,
+            )
+        };
+
+        if err.is_null() {
+            val != 0
+        } else {
+            unsafe {
+                sys::rs2_free_error(err);
+            }
+            false
+        }
+    }
+
+    /// Predicate for determining if the provided option is immutable or not.
+    ///
+    /// Returns true if the option is supported and can be mutated, otherwise false.
+    pub fn is_option_read_only(&self, option: Rs2Option) -> bool {
+        if !self.supports_option(option) {
+            return false;
+        }
+
+        let mut err = std::ptr::null_mut::<sys::rs2_error>();
+        let val = unsafe {
+            sys::rs2_is_option_read_only(
+                self.processing_block.as_ptr().cast::<sys::rs2_options>(),
+                #[allow(clippy::useless_conversion)]
+                (option as i32).try_into().unwrap(),
+                &mut err,
+            )
+        };
+
+        if err.is_null() {
+            val != 0
+        } else {
+            unsafe {
+                sys::rs2_free_error(err);
+            }
+            false
+        }
+    }
+
+    /// Sets the `value` associated with the provided `option` for the sensor.
+    ///
+    /// Returns null tuple if the option can be successfully set on the sensor, otherwise an error.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OptionSetError::OptionNotSupported`] if the option is not supported on this
+    /// sensor.
+    ///
+    /// Returns [`OptionSetError::OptionIsReadOnly`] if the option is supported but cannot be set
+    /// on this sensor.
+    ///
+    /// Returns [`OptionSetError::CouldNotSetOption`] if the option is supported and not read-only,
+    /// but could not be set for another reason (invalid value, internal exception, etc.).
+    pub fn set_option(&mut self, option: Rs2Option, value: f32) -> Result<(), OptionSetError> {
+        if !self.supports_option(option) {
+            return Err(OptionSetError::OptionNotSupported);
+        }
+
+        if self.is_option_read_only(option) {
+            return Err(OptionSetError::OptionIsReadOnly);
+        }
+
+        let mut err = std::ptr::null_mut::<sys::rs2_error>();
+        unsafe {
+            sys::rs2_set_option(
+                self.processing_block.as_ptr().cast::<sys::rs2_options>(),
+                #[allow(clippy::useless_conversion)]
+                (option as i32).try_into().unwrap(),
+                value,
+                &mut err,
+            );
+            check_rs2_error!(err, OptionSetError::CouldNotSetOption)?;
+
+            Ok(())
         }
     }
 }
