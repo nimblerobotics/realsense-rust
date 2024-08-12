@@ -18,7 +18,7 @@ use thiserror::Error;
 pub const BITS_PER_BYTE: i32 = 8;
 
 /// Occurs when a frame type cannot be constructed from the given data.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum FrameConstructionError {
     /// Could not get frame width.
     #[error("Could not get frame width. Type: {0}; Reason: {1}")]

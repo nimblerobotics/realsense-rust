@@ -11,7 +11,7 @@ use std::{convert::TryInto, ffi::CStr, path::Path, ptr::NonNull};
 use thiserror::Error;
 
 /// Type describing all possible errors that can occur when trying to configure a pipeline.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum ConfigurationError {
     /// The requested stream could not be enabled.
     #[error("Could not enable stream. Type: {0}; Reason: {1}")]

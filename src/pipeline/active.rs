@@ -8,7 +8,7 @@ use std::{ptr::NonNull, task::Poll, time::Duration};
 use thiserror::Error;
 
 /// Enumeration over possible errors that can occur when waiting for a frame.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum FrameWaitError {
     /// librealsense2 had an internal error occur while waiting for frames.
     #[error("An internal error occurred while waiting for frames. Type: {0}; Reason: {1}")]

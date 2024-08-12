@@ -75,7 +75,7 @@ pub enum StreamConstructionError {
 /// Follows the standard pattern of errors where the enum variant describes what the low-level code
 /// was attempting to do while the string carried alongside describes the underlying error message
 /// from any C++ exceptions that occur.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum DataError {
     /// Could not get extrinsics between the requested streams.
     #[error("Could not get extrinsics. Type: {0}; Reason: {1}")]

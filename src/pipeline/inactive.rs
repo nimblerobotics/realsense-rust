@@ -8,7 +8,7 @@ use std::{convert::TryFrom, ptr::NonNull};
 use thiserror::Error;
 
 /// Enumeration of possible errors that can occur during pipeline construction.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum PipelineConstructionError {
     /// The pipeline could not be created from the context.
     #[error("Could not create the pipeline from the provided context. Type: {0}; Reason {1}")]
@@ -16,7 +16,7 @@ pub enum PipelineConstructionError {
 }
 
 /// Enumeration of possible errors that can occur when trying to start the pipeline.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum PipelineActivationError {
     /// The pipeline could not be started due to an internal exception.
     #[error("Could not successfully start the pipeline. Type: {0}; Reason: {1}")]

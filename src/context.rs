@@ -21,7 +21,7 @@ pub struct Context {
 }
 
 /// An error type describing failure to construct a context.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 #[error("Could not construct the context. Type: {0}; Reason: {1}")]
 pub struct ContextConstructionError(pub Rs2Exception, pub String);
 

@@ -16,7 +16,7 @@ use std::ffi::CStr;
 use thiserror::Error;
 
 /// Occur when an option cannot be set.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum OptionSetError {
     /// The requested option is not supported by this sensor.
     #[error("Option not supported on this sensor.")]
