@@ -35,6 +35,7 @@ num-derive = "0.3"
 num-traits = "0.2"
 realsense-sys = { version = "2.54.3", path = "realsense-sys" }
 thiserror = "1.0"
+log = "0.4"
 
 [dev-dependencies]
 opencv = { version = "0.84", features = [
