@@ -143,7 +143,11 @@ macro_rules! check_rs2_error {
             let err: *mut sys::rs2_error = $rs2_error;
             if err.as_ref().is_some() {
                 let realsense_exception_type = sys::rs2_get_librealsense_exception_type(err);
-                let realsense_exception_type_i32 = realsense_exception_type.try_into().unwrap();
+                let realsense_exception_type_i32 =
+                    match realsense_exception_type.try_into().unwrap() {
+                        8 => 0, // librealsense2 use 8 to indicate unknown error
+                        other => other,
+                    };
 
                 let res = $result(
                     Rs2Exception::from_i32(realsense_exception_type_i32).unwrap_or_else(|| {

@@ -1,5 +1,6 @@
 #![doc = include_str!("../README.md")]
 #![allow(unknown_lints)]
+#![allow(non_local_definitions)]
 #![allow(clippy::all)]
 
 pub mod base;

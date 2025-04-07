@@ -36,9 +36,10 @@ num-traits = "0.2"
 realsense-sys = { version = "2.54.3", path = "realsense-sys" }
 thiserror = "1.0"
 log = "0.4"
+parking_lot = "0.12"
 
 [dev-dependencies]
-opencv = { version = "0.84", features = [
+opencv = { version = "0.91.3", features = [
     "highgui",
     "imgproc",
     "clang-runtime", # necessary for error "a `libclang` shared library is not loaded on this thread"

@@ -13,6 +13,9 @@ use realsense_sys as sys;
 use std::{collections::HashSet, convert::From, path::Path, ptr::NonNull};
 use thiserror::Error;
 
+use parking_lot::{Condvar, Mutex};
+use std::sync::Arc;
+
 /// Type describing a RealSense context, used by the rest of the API.
 #[derive(Debug)]
 pub struct Context {
@@ -40,9 +43,57 @@ pub struct CouldNotAddDeviceError(pub Rs2Exception, pub String);
 #[error("Could not remove device from file. Type: {0}; Reason: {1}")]
 pub struct CouldNotRemoveDeviceError(pub Rs2Exception, pub String);
 
+/// An error type describing failure to get the device count.
+#[derive(Error, Debug)]
+#[error("Could not get the device count. Type: {0}; Reason: {1}")]
+pub struct CouldNotGetDeviceCountError(pub Rs2Exception, pub String);
+
+/// An error type describing failure to set the devices changed notifier.
+#[derive(Error, Debug)]
+#[error("Could not set the devices changed notifier. Type: {0}; Reason: {1}")]
+pub struct CouldNotSetDevicesChangedNotifierError(pub Rs2Exception, pub String);
+
 impl Drop for Context {
     fn drop(&mut self) {
         unsafe { sys::rs2_delete_context(self.context_ptr.as_ptr()) }
+    }
+}
+
+#[repr(C)]
+/// A struct that contains a mutex and a condition variable.
+/// This is used to notify the main thread when devices are connected.
+/// Enforcing C ABI to avoid issues with Rust optimizations.
+pub struct DeviceReadyNotifier {
+    /// A mutex to lock the ready state.
+    ready: Mutex<bool>,
+    /// A condition variable to wait for the ready state.
+    condition: Condvar,
+}
+
+impl DeviceReadyNotifier {
+    /// Create a new device ready notifier.
+    pub fn new() -> Self {
+        Self {
+            ready: Mutex::new(false),
+            condition: Condvar::new(),
+        }
+    }
+
+    /// Notify the device ready notifier that a device has been added.
+    pub fn notify(&self) {
+        let mut ready = self.ready.lock();
+        *ready = true;
+        self.condition.notify_one();
+    }
+
+    /// Wait for the device ready notifier to be notified. Return true if
+    /// the device is ready within the timeout, false otherwise.
+    pub fn wait_until_timeout(&self, timeout: std::time::Duration) -> bool {
+        let mut ready = self.ready.lock();
+        if *ready {
+            return true;
+        }
+        !self.condition.wait_for(&mut ready, timeout).timed_out()
     }
 }
 
@@ -193,5 +244,68 @@ impl Context {
     ///
     pub(crate) unsafe fn get_raw(&self) -> NonNull<sys::rs2_context> {
         self.context_ptr
+    }
+
+    /// Set a callback notifier to be called when devices connected.
+    ///
+    /// # Safety
+    ///
+    /// This function is not intended to be called or used outside of the crate itself.
+    /// It is safe because it calls the binding of librealsense directly, and
+    /// the error handling is done in the crate itself.
+    pub fn get_devices_connected_notifier(
+        &self,
+    ) -> Result<Arc<DeviceReadyNotifier>, CouldNotSetDevicesChangedNotifierError> {
+        // Create a boxed copy of is_ready that can be passed to the callback
+        let is_ready = Arc::new(DeviceReadyNotifier::new());
+        let is_ready_ptr = Arc::into_raw(is_ready.clone());
+
+        unsafe extern "C" fn callback(
+            removed: *mut sys::rs2_device_list,
+            added: *mut sys::rs2_device_list,
+            is_ready_ptr: *mut std::os::raw::c_void,
+        ) {
+            let mut err = std::ptr::null_mut::<sys::rs2_error>();
+            let removed_count = sys::rs2_get_device_count(removed, &mut err);
+            if let Err(e) = check_rs2_error!(err, CouldNotGetDeviceCountError) {
+                log::error!("Error getting removed device count: {}", e);
+                return;
+            }
+            if removed_count > 0 {
+                log::info!("Removed {} RealSense devices", removed_count);
+                return;
+            }
+
+            let mut err = std::ptr::null_mut::<sys::rs2_error>();
+            let added_count = sys::rs2_get_device_count(added, &mut err);
+            if let Err(e) = check_rs2_error!(err, CouldNotGetDeviceCountError) {
+                log::error!("Error getting added device count: {}", e);
+                return;
+            }
+            if added_count > 0 {
+                log::info!("Added {} RealSense devices. Notifying...", added_count);
+                let is_ready: Arc<DeviceReadyNotifier> =
+                    Arc::from_raw(is_ready_ptr as *const DeviceReadyNotifier);
+                is_ready.notify();
+            }
+        }
+
+        unsafe {
+            let mut err = std::ptr::null_mut::<sys::rs2_error>();
+            sys::rs2_set_devices_changed_callback(
+                self.context_ptr.as_ptr(),
+                Some(callback),
+                is_ready_ptr as *mut std::os::raw::c_void,
+                &mut err,
+            );
+
+            // If there's an error, we need to free the heap data to avoid memory leak
+            if let Err(err) = check_rs2_error!(err, CouldNotSetDevicesChangedNotifierError) {
+                drop(Arc::from_raw(is_ready_ptr as *const DeviceReadyNotifier));
+                return Err(err);
+            }
+        }
+
+        Ok(is_ready)
     }
 }
