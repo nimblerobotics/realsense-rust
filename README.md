@@ -61,7 +61,7 @@ compatibility; good luck.
     "supported" by the sensor, but are actually just set to their default values on runtime. These
     options are listed and tested in
     [check_supported_but_ignored_sensor_options](./tests/connectivity_l500.rs) device tests.
-    Currently, [Rs2Option::GlobalTimeEnabled] on the L500 is the only setting known to suffer from
+    Currently, `Rs2Option::GlobalTimeEnabled` on the L500 is the only setting known to suffer from
     this. However, the test has been written in a way that makes it easy to test more Options for
     this same behavior.
 
@@ -85,4 +85,4 @@ please submit a bug report!
 
 ## License
 
-Apache 2.0. See [LICENSE](LICENSE) file.
+Apache 2.0. See LICENSE file.

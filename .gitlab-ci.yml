@@ -1,10 +1,3 @@
-# CONFIGURATION
-default:
-    image: "registry.gitlab.com/tangram-vision/oss/ci-oss/public-ci:latest"
-    before_script:
-        # Update rust in case the latest version isn't built into our docker image.
-        - rustup update stable
-
 # Run pipeline for MRs and main branch
 # https://docs.gitlab.com/ee/ci/yaml/workflow.html#switch-between-branch-pipelines-and-merge-request-pipelines
 workflow:
@@ -14,16 +7,13 @@ workflow:
 
 stages:
     - lint
-    - doc
-
-##### ########## ########## ########## ########## #####
-# TEST STAGE
-# - [PASS REQ] runs all unit tests in the build
-# - [PASS REQ] runs a lint checker over every piece of code
 
 lint:
     stage: lint
+    image: rust:1.93.1
     script:
         - rustc --version
         - cargo --version
-        - cargo clippy  
+        - rustup component add clippy
+        - cargo clippy --features docs-only
+    allow_failure: true

@@ -467,7 +467,7 @@ impl Sensor {
     /// This command can fail directly after the pipeline start. This is a bug in librealsense.
     /// Either wait for the first Frameset to be received or repeat the command in a loop
     /// with a delay until it succeeds as suggested by Intel.
-    /// Issue at librealsense: https://github.com/IntelRealSense/librealsense/issues/8004
+    /// Issue at librealsense: <https://github.com/IntelRealSense/librealsense/issues/8004>
     pub fn set_region_of_interest(&mut self, roi: Rs2Roi) -> Result<(), RoiSetError> {
         unsafe {
             let mut err = std::ptr::null_mut::<sys::rs2_error>();

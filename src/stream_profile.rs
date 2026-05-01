@@ -410,10 +410,10 @@ impl StreamProfile {
     /// # Errors
     ///
     /// Returns
-    /// [`DataError::StreamDoesNotHaveMotionIntrinsics`](DataError::StreamDoesNotHaveMotionIntrinsics)
+    /// [`DataError::StreamDoesNotHaveMotionIntrinsics`]
     /// if the stream does not have motion intrinsics.
     ///
-    /// Returns [`DataError::CouldNotGetMotionIntrinsics`](DataError::CouldNotGetMotionIntrinsics)
+    /// Returns [`DataError::CouldNotGetMotionIntrinsics`]
     /// if this call fails for any other reason.
     pub fn motion_intrinsics(&self) -> Result<Rs2MotionDeviceIntrinsics, DataError> {
         match self.stream {

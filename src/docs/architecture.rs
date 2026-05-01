@@ -31,7 +31,7 @@
 //! [`num_derive`](https://crates.io/crates/num-derive) and [`num_traits`](https://crates.io/crates/num-traits) crates.
 //! Since all of the C-style enums in librealsense2 are bound as `u32` values with `bindgen`, we do a fairly small
 //! transformation back and forth between the two representations. C-style "strings" (read: `const char*`) are likewise
-//! converted into the Rust native [`std::ffi::CStr`](std::ffi::CStr).
+//! converted into the Rust native [`std::ffi::CStr`].
 //!
 //! ### Provide concrete types rather than "extensible" pointers
 //!

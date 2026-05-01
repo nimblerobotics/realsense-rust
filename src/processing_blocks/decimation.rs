@@ -1,7 +1,7 @@
 //! Processing block that decimates the depth stream
 //!
 //! Based on an example here:
-//! https://github.com/IntelRealSense/librealsense/blob/4673a37d981164af8eeb8e296e430fc1427e008d/doc/post-processing-filters.md?plain=1#L111
+//! <https://github.com/IntelRealSense/librealsense/blob/4673a37d981164af8eeb8e296e430fc1427e008d/doc/post-processing-filters.md?plain=1#L111>
 
 use crate::{
     check_rs2_error,

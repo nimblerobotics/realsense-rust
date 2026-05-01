@@ -19,6 +19,8 @@ pub mod stream_profile;
 
 pub mod logging;
 
+pub use device::{AutoCalibrationError, CalibrationResult, DeviceConstructionError};
+
 /// The module collects common used traits from this crate.
 pub mod prelude {
     pub use crate::frame::{FrameCategory, FrameEx};

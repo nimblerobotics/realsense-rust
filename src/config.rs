@@ -87,9 +87,9 @@ impl Config {
     ///
     /// It is not an error if `stream` and `format` do not match appropriately, but you may find
     /// that the configuration will never resolve if they do not.. E.g. you cannot pass in
-    /// [`Rs2StreamKind::Color`](crate::kind::Rs2StreamKind::Color) alongside
-    /// [`Rs2Format::Z16`](crate::kind::Rs2Format::Z16). If you're unsure, pass in
-    /// [`Rs2Format::Any`](crate::kind::Rs2Format::Any) and librealsense2 will determine what the
+    /// [`Rs2StreamKind::Color`] alongside
+    /// [`Rs2Format::Z16`]. If you're unsure, pass in
+    /// [`Rs2Format::Any`] and librealsense2 will determine what the
     /// most appropriate format is for a given stream.
     ///
     /// The index is can be optionally provided. If it is not provided, then librealsense2 will
