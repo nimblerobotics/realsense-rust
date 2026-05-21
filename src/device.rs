@@ -15,6 +15,7 @@ use std::{
     convert::{From, TryFrom, TryInto},
     ffi::CStr,
     ptr::{self, NonNull},
+    sync::OnceLock,
 };
 use thiserror::Error;
 
@@ -75,6 +76,9 @@ pub struct CalibrationResult {
 pub struct Device {
     /// A non-null pointer to the underlying librealsense device
     device_ptr: NonNull<sys::rs2_device>,
+    /// Cached result of `rs2_is_device_extendable_to` for the auto-calibration
+    /// extension.  Populated on the first call to any calibration method.
+    autocal_supported: OnceLock<bool>,
 }
 
 impl Drop for Device {
@@ -93,7 +97,10 @@ impl From<NonNull<sys::rs2_device>> for Device {
     /// Constructs a device from a pointer to an `rs2_device` type from the C-FFI.
     ///
     fn from(device_ptr: NonNull<sys::rs2_device>) -> Self {
-        Device { device_ptr }
+        Device {
+            device_ptr,
+            autocal_supported: OnceLock::new(),
+        }
     }
 }
 
@@ -242,6 +249,39 @@ impl Device {
         }
     }
 
+    /// Check (and cache) whether the device supports the auto-calibration extension.
+    ///
+    /// `rs2_is_device_extendable_to` is called at most once per `Device`
+    /// instance; the result is stored in `autocal_supported` via `OnceLock`.
+    ///
+    /// # Errors
+    ///
+    /// - [`AutoCalibrationError::NotSupported`] — device does not expose the
+    ///   `RS2_EXTENSION_AUTO_CALIBRATED_DEVICE` extension, or the C API
+    ///   returned an error.
+    fn check_autocal_supported(&self) -> Result<(), AutoCalibrationError> {
+        let supported = self.autocal_supported.get_or_init(|| {
+            let mut err = ptr::null_mut::<sys::rs2_error>();
+            let result = unsafe {
+                sys::rs2_is_device_extendable_to(
+                    self.device_ptr.as_ptr(),
+                    sys::rs2_extension_RS2_EXTENSION_AUTO_CALIBRATED_DEVICE,
+                    &mut err,
+                )
+            };
+            if !err.is_null() {
+                free_rs2_error(err);
+                return false;
+            }
+            result != 0
+        });
+        if *supported {
+            Ok(())
+        } else {
+            Err(AutoCalibrationError::NotSupported)
+        }
+    }
+
     /// Run on-chip calibration (OCC).
     ///
     /// Blocks until calibration completes or `timeout_ms` elapses.
@@ -257,7 +297,7 @@ impl Device {
         config_json: &str,
         timeout_ms: u32,
     ) -> Result<CalibrationResult, AutoCalibrationError> {
-        self.check_auto_calibration_supported()?;
+        self.check_autocal_supported()?;
         let json_bytes = config_json.as_bytes();
         let json_len = i32::try_from(json_bytes.len())
             .map_err(|_| AutoCalibrationError::OccFailed("config_json too large".to_string()))?;
@@ -302,12 +342,12 @@ impl Device {
     /// - [`AutoCalibrationError::NotSupported`] — device lacks the auto-calibration extension.
     /// - [`AutoCalibrationError::SetTableFailed`] — the C API rejected the calibration table.
     pub fn set_calibration_table(&self, table: &[u8]) -> Result<(), AutoCalibrationError> {
+        self.check_autocal_supported()?;
         if table.is_empty() {
             return Err(AutoCalibrationError::SetTableFailed(
                 "calibration table must not be empty".to_string(),
             ));
         }
-        self.check_auto_calibration_supported()?;
         let table_len = i32::try_from(table.len()).map_err(|_| {
             AutoCalibrationError::SetTableFailed("calibration table too large".to_string())
         })?;
@@ -346,12 +386,12 @@ impl Device {
         config_json: &str,
         timeout_ms: u32,
     ) -> Result<CalibrationResult, AutoCalibrationError> {
+        self.check_autocal_supported()?;
         if !(60.0..=10_000.0).contains(&ground_truth_mm) {
             return Err(AutoCalibrationError::TareFailed(format!(
                 "ground_truth_mm {ground_truth_mm} is outside the valid range [60, 10000]"
             )));
         }
-        self.check_auto_calibration_supported()?;
         let json_bytes = config_json.as_bytes();
         let json_len = i32::try_from(json_bytes.len())
             .map_err(|_| AutoCalibrationError::TareFailed("config_json too large".to_string()))?;
@@ -394,7 +434,7 @@ impl Device {
     /// - [`AutoCalibrationError::NotSupported`] — device lacks the auto-calibration extension.
     /// - [`AutoCalibrationError::WriteFailed`] — the C API reported a write failure.
     pub fn write_calibration(&self) -> Result<(), AutoCalibrationError> {
-        self.check_auto_calibration_supported()?;
+        self.check_autocal_supported()?;
         let mut err = ptr::null_mut::<sys::rs2_error>();
         unsafe {
             sys::rs2_write_calibration(self.device_ptr.as_ptr(), &mut err);
@@ -412,7 +452,7 @@ impl Device {
     /// - [`AutoCalibrationError::NotSupported`] — device lacks the auto-calibration extension.
     /// - [`AutoCalibrationError::FactoryResetFailed`] — the C API reported a failure.
     pub fn reset_to_factory_calibration(&self) -> Result<(), AutoCalibrationError> {
-        self.check_auto_calibration_supported()?;
+        self.check_autocal_supported()?;
         let mut err = ptr::null_mut::<sys::rs2_error>();
         unsafe {
             sys::rs2_reset_to_factory_calibration(self.device_ptr.as_ptr(), &mut err);
@@ -434,28 +474,6 @@ impl Device {
     /// you risk a double-free or use-after-free error.
     pub(crate) unsafe fn get_raw(&self) -> NonNull<sys::rs2_device> {
         self.device_ptr
-    }
-
-    /// Returns `Ok(())` if the device supports `RS2_EXTENSION_AUTO_CALIBRATED_DEVICE`, else `NotSupported`.
-    fn check_auto_calibration_supported(&self) -> Result<(), AutoCalibrationError> {
-        let mut err = ptr::null_mut::<sys::rs2_error>();
-        let supported = unsafe {
-            sys::rs2_is_device_extendable_to(
-                self.device_ptr.as_ptr(),
-                sys::rs2_extension_RS2_EXTENSION_AUTO_CALIBRATED_DEVICE,
-                &mut err,
-            )
-        };
-        if !err.is_null() {
-            // If the extension check itself fails we cannot confirm support.
-            free_rs2_error(err);
-            return Err(AutoCalibrationError::NotSupported);
-        }
-        if supported == 0 {
-            Err(AutoCalibrationError::NotSupported)
-        } else {
-            Ok(())
-        }
     }
 }
 
